@@ -1,4 +1,4 @@
-# Warren Media Streaming (Text me at 3136410670)
+# Warren Media Streaming
 
 A cinema-first public streaming platform built with Next.js, featuring fullscreen theater mode playback and smooth horizontal browsing.
 
