@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --amber-glow: #f59e0b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body.theater-active {
+  overflow: hidden;
+}
+
+@layer utilities {
+  .glow-amber {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+  }
+  
+  .glow-amber-strong {
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+  }
+}
+

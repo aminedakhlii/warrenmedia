@@ -1,0 +1,250 @@
+# Warren Media Streaming
+
+A cinema-first public streaming platform built with Next.js, featuring fullscreen theater mode playback and smooth horizontal browsing.
+
+## 🎬 Features
+
+- **Theater Mode**: Fullscreen video playback with custom controls
+- **Smooth Scrolling**: Physics-based horizontal row scrolling with inertial glide
+- **Resume Playback**: Automatic position saving and resume functionality
+- **Continue Watching**: Smart tracking of viewing progress
+- **Multi-Input Support**: Mouse drag, scroll wheel, touch, keyboard, and TV remote navigation
+- **Mux Video Streaming**: HLS-based adaptive streaming
+- **Admin Panel**: Simple interface for adding and managing titles
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: Supabase (PostgreSQL)
+- **Video**: Mux (HLS streaming)
+- **Hosting**: Vercel (recommended)
+
+## 📋 Prerequisites
+
+- Node.js 18+ and npm
+- Supabase account
+- Mux account
+- Git
+
+## 🚀 Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+git clone <your-repo-url>
+cd warrenmedia
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to Settings → API to find your project URL and anon key
+3. In the SQL Editor, run the schema from `supabase-schema.sql`:
+
+```sql
+-- Copy and paste the contents of supabase-schema.sql
+```
+
+This will create:
+- `titles` table: Stores all video content
+- `playback_progress` table: Tracks viewing progress
+- Indexes for performance
+- RLS policies for public access (Phase 1)
+
+### 4. Set Up Mux
+
+1. Create an account at [mux.com](https://mux.com)
+2. Upload videos and get Playback IDs
+3. (Optional) Get API tokens if you plan to use server-side operations
+
+### 5. Configure Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Optional: For server-side Mux operations
+MUX_TOKEN_ID=your-mux-token-id
+MUX_TOKEN_SECRET=your-mux-token-secret
+```
+
+### 6. Run Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 📱 Adding Content
+
+### Via Admin Panel
+
+1. Navigate to `/admin/titles`
+2. Fill in the form:
+   - **Title**: Display name
+   - **Poster Image URL**: Direct link to poster image
+   - **Mux Playback ID**: Get from your Mux dashboard
+   - **Category**: Choose from Trending, Originals, or New Releases
+   - **Runtime**: Duration in seconds
+3. Click "Add Title"
+
+### Programmatically
+
+Use the Supabase client:
+
+```typescript
+import { supabase } from './app/lib/supabaseClient'
+
+await supabase.from('titles').insert({
+  title: 'Movie Title',
+  poster_url: 'https://...',
+  mux_playback_id: 'abc123...',
+  category: 'trending',
+  runtime_seconds: 7200
+})
+```
+
+## 🎮 Controls
+
+### Theater Mode
+
+- **Space / K**: Play/Pause
+- **Escape**: Exit theater mode
+- **Arrow Left**: Rewind 10 seconds
+- **Arrow Right**: Fast forward 10 seconds
+- **F**: Toggle fullscreen
+- **Mouse Move**: Show controls
+- **Click**: Play/Pause
+
+### Homepage Browsing
+
+- **Mouse Drag**: Scroll rows horizontally
+- **Scroll Wheel**: Scroll rows
+- **Arrow Keys**: Navigate between titles
+- **Enter**: Play selected title
+- **Touch**: Swipe to scroll
+
+## 🏗️ Project Structure
+
+```
+warrenmedia/
+├── app/
+│   ├── components/
+│   │   ├── RowSlider.tsx        # Horizontal scrolling row
+│   │   └── TheaterOverlay.tsx   # Fullscreen video player
+│   ├── lib/
+│   │   └── supabaseClient.ts    # Database client & types
+│   ├── admin/
+│   │   └── titles/
+│   │       └── page.tsx         # Admin interface
+│   ├── layout.tsx               # Root layout
+│   ├── page.tsx                 # Homepage
+│   └── globals.css              # Global styles
+├── supabase-schema.sql          # Database schema
+├── next.config.js               # Next.js configuration
+├── tailwind.config.ts           # Tailwind configuration
+└── package.json                 # Dependencies
+```
+
+## 🎨 Design Philosophy
+
+- **Dark & Architectural**: Minimal black background with warm amber accents
+- **Cinema-First**: Theater mode is the core experience
+- **Smooth Physics**: Analog feel for scrolling, no snapping
+- **State Preservation**: Browsing state persists when returning from playback
+
+## 📊 Database Schema
+
+### `titles`
+- `id`: UUID (primary key)
+- `title`: Text
+- `poster_url`: Text
+- `mux_playback_id`: Text
+- `category`: Enum (trending, originals, new_releases)
+- `runtime_seconds`: Integer
+- `created_at`: Timestamp
+
+### `playback_progress`
+- `id`: UUID (primary key)
+- `title_id`: UUID (foreign key → titles)
+- `position_seconds`: Real
+- `updated_at`: Timestamp
+
+## 🚀 Deployment
+
+### Deploy to Vercel
+
+1. Push your code to GitHub
+2. Import project in Vercel
+3. Add environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy
+
+```bash
+npm run build  # Test build locally first
+```
+
+## 🔒 Security Notes (Phase 1)
+
+- **No Authentication**: Content is publicly accessible
+- **RLS Policies**: Set to allow all operations for Phase 1
+- **Admin Panel**: No password protection (add in Phase 2)
+
+## 🐛 Troubleshooting
+
+### Videos won't play
+- Verify Mux Playback ID is correct
+- Check browser console for errors
+- Ensure Mux video is ready (not still processing)
+
+### Resume playback not working
+- Check Supabase connection
+- Verify `playback_progress` table exists
+- Check browser console for API errors
+
+### Scrolling feels jerky
+- Try reducing the number of titles in a row
+- Check if images are optimized
+- Verify smooth scrolling CSS is applied
+
+## 📝 Phase 1 Scope
+
+### Implemented
+✅ Cinema-first theater mode  
+✅ Smooth horizontal scrolling with physics  
+✅ Resume playback functionality  
+✅ Continue Watching row  
+✅ Category-based content rows  
+✅ Keyboard/TV navigation  
+✅ Admin panel for content management  
+
+### Not Implemented (Phase 2)
+❌ User authentication  
+❌ Episode hierarchy  
+❌ Playlists  
+❌ Audio-only content  
+❌ Podcasts  
+
+## 🤝 Contributing
+
+This is Phase 1. Follow the specifications in `prompt.txt` strictly.
+
+## 📄 License
+
+[Your License Here]
+
+---
+
+Built with ❤️ for cinema lovers
+
