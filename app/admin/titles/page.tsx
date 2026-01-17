@@ -1,21 +1,41 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase, type Title } from '../../lib/supabaseClient'
+import { supabase, type Title, type Season, type Episode, ContentType } from '../../lib/supabaseClient'
 
 export default function AdminTitlesPage() {
   const [titles, setTitles] = useState<Title[]>([])
+  const [contentType, setContentType] = useState<ContentType>('film')
   const [formData, setFormData] = useState({
     title: '',
     poster_url: '',
     mux_playback_id: '',
-    category: 'trending' as 'trending' | 'originals' | 'new_releases',
+    category: 'trending' as 'trending' | 'originals' | 'new_releases' | 'music_videos',
     runtime_seconds: 0,
+    description: '',
   })
+
+  // Series management
+  const [selectedSeries, setSelectedSeries] = useState<string | null>(null)
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [episodes, setEpisodes] = useState<Episode[]>([])
+  const [seasonForm, setSeasonForm] = useState({
+    season_number: 1,
+    title: '',
+  })
+  const [episodeForm, setEpisodeForm] = useState({
+    season_id: '',
+    episode_number: 1,
+    title: '',
+    mux_playback_id: '',
+    runtime_seconds: 0,
+    description: '',
+  })
+
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [activeTab, setActiveTab] = useState<'titles' | 'series'>('titles')
 
-  // Fetch existing titles
   useEffect(() => {
     fetchTitles()
   }, [])
@@ -31,13 +51,47 @@ export default function AdminTitlesPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function fetchSeriesData(seriesId: string) {
+    const { data: seasonsData } = await supabase
+      .from('seasons')
+      .select('*')
+      .eq('series_id', seriesId)
+      .order('season_number', { ascending: true })
+
+    if (seasonsData) {
+      setSeasons(seasonsData)
+    }
+  }
+
+  async function fetchEpisodes(seasonId: string) {
+    const { data: episodesData } = await supabase
+      .from('episodes')
+      .select('*')
+      .eq('season_id', seasonId)
+      .order('episode_number', { ascending: true })
+
+    if (episodesData) {
+      setEpisodes(episodesData)
+    }
+  }
+
+  const handleSubmitTitle = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage('')
 
     try {
-      const { error } = await supabase.from('titles').insert([formData])
+      const titleData: any = {
+        ...formData,
+        content_type: contentType,
+      }
+
+      // Series don't need mux_playback_id at title level
+      if (contentType === 'series') {
+        titleData.mux_playback_id = null
+      }
+
+      const { error } = await supabase.from('titles').insert([titleData])
 
       if (error) throw error
 
@@ -48,6 +102,7 @@ export default function AdminTitlesPage() {
         mux_playback_id: '',
         category: 'trending',
         runtime_seconds: 0,
+        description: '',
       })
       fetchTitles()
     } catch (error) {
@@ -57,8 +112,62 @@ export default function AdminTitlesPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this title?')) return
+  const handleAddSeason = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedSeries) return
+
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const { error } = await supabase.from('seasons').insert([{
+        series_id: selectedSeries,
+        ...seasonForm,
+      }])
+
+      if (error) throw error
+
+      setMessage('Season added successfully!')
+      setSeasonForm({ season_number: 1, title: '' })
+      fetchSeriesData(selectedSeries)
+    } catch (error) {
+      setMessage('Error adding season: ' + (error as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddEpisode = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!episodeForm.season_id) return
+
+    setLoading(true)
+    setMessage('')
+
+    try {
+      const { error } = await supabase.from('episodes').insert([episodeForm])
+
+      if (error) throw error
+
+      setMessage('Episode added successfully!')
+      setEpisodeForm({
+        season_id: episodeForm.season_id,
+        episode_number: 1,
+        title: '',
+        mux_playback_id: '',
+        runtime_seconds: 0,
+        description: '',
+      })
+      fetchEpisodes(episodeForm.season_id)
+    } catch (error) {
+      setMessage('Error adding episode: ' + (error as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteTitle = async (id: string) => {
+    if (!confirm('Are you sure? This will delete all related seasons and episodes.')) return
 
     try {
       const { error } = await supabase.from('titles').delete().eq('id', id)
@@ -72,96 +181,340 @@ export default function AdminTitlesPage() {
     }
   }
 
+  const seriesTitles = titles.filter(t => t.content_type === 'series')
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">Admin: Manage Titles</h1>
+        <h1 className="text-4xl font-bold mb-8">Admin: Manage Content</h1>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8">
+          <button
+            onClick={() => setActiveTab('titles')}
+            className={`px-6 py-3 rounded-lg font-semibold transition ${
+              activeTab === 'titles'
+                ? 'bg-amber-glow text-black'
+                : 'bg-gray-800 hover:bg-gray-700'
+            }`}
+          >
+            Add Titles
+          </button>
+          <button
+            onClick={() => setActiveTab('series')}
+            className={`px-6 py-3 rounded-lg font-semibold transition ${
+              activeTab === 'series'
+                ? 'bg-amber-glow text-black'
+                : 'bg-gray-800 hover:bg-gray-700'
+            }`}
+          >
+            Manage Series
+          </button>
+        </div>
 
         {/* Add Title Form */}
-        <div className="bg-gray-900 rounded-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Add New Title</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Title</label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                required
-              />
-            </div>
+        {activeTab === 'titles' && (
+          <div className="bg-gray-900 rounded-lg p-6 mb-8">
+            <h2 className="text-2xl font-semibold mb-4">Add New Title</h2>
+            <form onSubmit={handleSubmitTitle} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Content Type</label>
+                <select
+                  value={contentType}
+                  onChange={(e) => setContentType(e.target.value as ContentType)}
+                  className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                >
+                  <option value="film">Film</option>
+                  <option value="series">Series</option>
+                  <option value="music_video">Music Video</option>
+                  <option value="podcast">Podcast</option>
+                </select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Poster Image URL</label>
-              <input
-                type="url"
-                value={formData.poster_url}
-                onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                placeholder="https://example.com/poster.jpg"
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Mux Playback ID</label>
-              <input
-                type="text"
-                value={formData.mux_playback_id}
-                onChange={(e) => setFormData({ ...formData, mux_playback_id: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                placeholder="abc123xyz..."
-                required
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Poster Image URL</label>
+                <input
+                  type="url"
+                  value={formData.poster_url}
+                  onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                  placeholder="https://example.com/poster.jpg"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
+              {contentType !== 'series' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Mux Playback ID {contentType === 'podcast' && '(Audio)'}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.mux_playback_id}
+                    onChange={(e) => setFormData({ ...formData, mux_playback_id: e.target.value })}
+                    className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                    placeholder="abc123xyz..."
+                    required={contentType !== 'series'}
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      category: e.target.value as typeof formData.category,
+                    })
+                  }
+                  className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                >
+                  <option value="trending">Trending</option>
+                  <option value="originals">Originals</option>
+                  <option value="new_releases">New Releases</option>
+                  <option value="music_videos">Music Videos</option>
+                </select>
+              </div>
+
+              {contentType !== 'series' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Runtime (seconds)</label>
+                  <input
+                    type="number"
+                    value={formData.runtime_seconds}
+                    onChange={(e) =>
+                      setFormData({ ...formData, runtime_seconds: parseInt(e.target.value) || 0 })
+                    }
+                    className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                    min="0"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Description (optional)</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                  rows={3}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="
+                  w-full px-6 py-3 rounded-lg font-semibold
+                  bg-amber-glow hover:bg-amber-600
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-300
+                  glow-amber
+                "
+              >
+                {loading ? 'Adding...' : 'Add Title'}
+              </button>
+
+              {message && (
+                <div
+                  className={`p-4 rounded-lg ${
+                    message.includes('Error') ? 'bg-red-900/50' : 'bg-green-900/50'
+                  }`}
+                >
+                  {message}
+                </div>
+              )}
+            </form>
+          </div>
+        )}
+
+        {/* Series Management */}
+        {activeTab === 'series' && (
+          <div className="space-y-8">
+            {/* Select Series */}
+            <div className="bg-gray-900 rounded-lg p-6">
+              <h2 className="text-2xl font-semibold mb-4">Select Series</h2>
               <select
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    category: e.target.value as 'trending' | 'originals' | 'new_releases',
-                  })
-                }
+                value={selectedSeries || ''}
+                onChange={(e) => {
+                  setSelectedSeries(e.target.value)
+                  if (e.target.value) {
+                    fetchSeriesData(e.target.value)
+                  }
+                }}
                 className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
               >
-                <option value="trending">Trending</option>
-                <option value="originals">Originals</option>
-                <option value="new_releases">New Releases</option>
+                <option value="">-- Select a series --</option>
+                {seriesTitles.map((series) => (
+                  <option key={series.id} value={series.id}>
+                    {series.title}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Runtime (seconds)
-              </label>
-              <input
-                type="number"
-                value={formData.runtime_seconds}
-                onChange={(e) =>
-                  setFormData({ ...formData, runtime_seconds: parseInt(e.target.value) || 0 })
-                }
-                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                min="0"
-              />
-            </div>
+            {selectedSeries && (
+              <>
+                {/* Add Season */}
+                <div className="bg-gray-900 rounded-lg p-6">
+                  <h2 className="text-2xl font-semibold mb-4">Add Season</h2>
+                  <form onSubmit={handleAddSeason} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Season Number</label>
+                        <input
+                          type="number"
+                          value={seasonForm.season_number}
+                          onChange={(e) =>
+                            setSeasonForm({ ...seasonForm, season_number: parseInt(e.target.value) || 1 })
+                          }
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          min="1"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={seasonForm.title}
+                          onChange={(e) => setSeasonForm({ ...seasonForm, title: e.target.value })}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          placeholder="Season 1"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full px-6 py-3 rounded-lg font-semibold bg-amber-glow hover:bg-amber-600 transition"
+                    >
+                      Add Season
+                    </button>
+                  </form>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="
-                w-full px-6 py-3 rounded-lg font-semibold
-                bg-amber-glow hover:bg-amber-600
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-all duration-300
-                glow-amber
-              "
-            >
-              {loading ? 'Adding...' : 'Add Title'}
-            </button>
+                  {/* Existing Seasons */}
+                  <div className="mt-6 space-y-2">
+                    {seasons.map((season) => (
+                      <div key={season.id} className="p-4 bg-gray-800 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="font-semibold">Season {season.season_number}</span>: {season.title}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setEpisodeForm({ ...episodeForm, season_id: season.id })
+                              fetchEpisodes(season.id)
+                            }}
+                            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition text-sm"
+                          >
+                            Manage Episodes
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Add Episode */}
+                {episodeForm.season_id && (
+                  <div className="bg-gray-900 rounded-lg p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Add Episode</h2>
+                    <form onSubmit={handleAddEpisode} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Episode Number</label>
+                        <input
+                          type="number"
+                          value={episodeForm.episode_number}
+                          onChange={(e) =>
+                            setEpisodeForm({ ...episodeForm, episode_number: parseInt(e.target.value) || 1 })
+                          }
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          min="1"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Title</label>
+                        <input
+                          type="text"
+                          value={episodeForm.title}
+                          onChange={(e) => setEpisodeForm({ ...episodeForm, title: e.target.value })}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Mux Playback ID</label>
+                        <input
+                          type="text"
+                          value={episodeForm.mux_playback_id}
+                          onChange={(e) => setEpisodeForm({ ...episodeForm, mux_playback_id: e.target.value })}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Runtime (seconds)</label>
+                        <input
+                          type="number"
+                          value={episodeForm.runtime_seconds}
+                          onChange={(e) =>
+                            setEpisodeForm({ ...episodeForm, runtime_seconds: parseInt(e.target.value) || 0 })
+                          }
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Description (optional)</label>
+                        <textarea
+                          value={episodeForm.description}
+                          onChange={(e) => setEpisodeForm({ ...episodeForm, description: e.target.value })}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          rows={2}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full px-6 py-3 rounded-lg font-semibold bg-amber-glow hover:bg-amber-600 transition"
+                      >
+                        Add Episode
+                      </button>
+                    </form>
+
+                    {/* Existing Episodes */}
+                    <div className="mt-6 space-y-2">
+                      {episodes.map((episode) => (
+                        <div key={episode.id} className="p-4 bg-gray-800 rounded-lg">
+                          <div className="font-semibold">
+                            Episode {episode.episode_number}: {episode.title}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            Mux ID: {episode.mux_playback_id}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             {message && (
               <div
@@ -172,18 +525,15 @@ export default function AdminTitlesPage() {
                 {message}
               </div>
             )}
-          </form>
-        </div>
+          </div>
+        )}
 
         {/* Existing Titles */}
         <div className="bg-gray-900 rounded-lg p-6">
-          <h2 className="text-2xl font-semibold mb-4">Existing Titles ({titles.length})</h2>
+          <h2 className="text-2xl font-semibold mb-4">All Titles ({titles.length})</h2>
           <div className="space-y-4">
             {titles.map((title) => (
-              <div
-                key={title.id}
-                className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg"
-              >
+              <div key={title.id} className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
                 <img
                   src={title.poster_url}
                   alt={title.title}
@@ -191,13 +541,15 @@ export default function AdminTitlesPage() {
                 />
                 <div className="flex-1">
                   <h3 className="font-semibold">{title.title}</h3>
-                  <p className="text-sm text-gray-400">Category: {title.category}</p>
-                  <p className="text-xs text-gray-500">
-                    Mux ID: {title.mux_playback_id}
+                  <p className="text-sm text-gray-400">
+                    {title.content_type} • {title.category}
                   </p>
+                  {title.mux_playback_id && (
+                    <p className="text-xs text-gray-500">Mux ID: {title.mux_playback_id}</p>
+                  )}
                 </div>
                 <button
-                  onClick={() => handleDelete(title.id)}
+                  onClick={() => handleDeleteTitle(title.id)}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition"
                 >
                   Delete
@@ -223,4 +575,3 @@ export default function AdminTitlesPage() {
     </div>
   )
 }
-

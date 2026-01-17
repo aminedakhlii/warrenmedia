@@ -2,16 +2,22 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import MuxPlayer from '@mux/mux-player-react'
-import type { Title } from '../lib/supabaseClient'
-import { supabase } from '../lib/supabaseClient'
+import type { Title, Season, Episode } from '../lib/supabaseClient'
+import { supabase, getCurrentUser } from '../lib/supabaseClient'
 
 interface TheaterOverlayProps {
   title: Title
   onClose: () => void
   initialPosition?: number
+  initialEpisode?: Episode
 }
 
-export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: TheaterOverlayProps) {
+export default function TheaterOverlay({
+  title,
+  onClose,
+  initialPosition = 0,
+  initialEpisode,
+}: TheaterOverlayProps) {
   const playerRef = useRef<HTMLVideoElement>(null)
   const [showControls, setShowControls] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -19,6 +25,83 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
   const [isPlaying, setIsPlaying] = useState(false)
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout>()
   const lastSaveTimeRef = useRef(0)
+
+  // Series-specific state
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [episodes, setEpisodes] = useState<Episode[]>([])
+  const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(initialEpisode || null)
+  const [selectedSeason, setSelectedSeason] = useState<Season | null>(null)
+  const [showEpisodeSelector, setShowEpisodeSelector] = useState(false)
+
+  const [user, setUser] = useState<any>(null)
+
+  // Get current user
+  useEffect(() => {
+    getCurrentUser().then(setUser)
+  }, [])
+
+  // Load series data if content is a series
+  useEffect(() => {
+    if (title.content_type === 'series') {
+      loadSeriesData()
+    }
+  }, [title])
+
+  const loadSeriesData = async () => {
+    try {
+      // Fetch seasons
+      const { data: seasonsData } = await supabase
+        .from('seasons')
+        .select('*')
+        .eq('series_id', title.id)
+        .order('season_number', { ascending: true })
+
+      if (seasonsData && seasonsData.length > 0) {
+        setSeasons(seasonsData)
+        setSelectedSeason(seasonsData[0])
+
+        // Fetch episodes for first season
+        const { data: episodesData } = await supabase
+          .from('episodes')
+          .select('*')
+          .eq('season_id', seasonsData[0].id)
+          .order('episode_number', { ascending: true })
+
+        if (episodesData && episodesData.length > 0) {
+          setEpisodes(episodesData)
+          if (!currentEpisode) {
+            setCurrentEpisode(episodesData[0])
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading series data:', error)
+    }
+  }
+
+  const loadEpisodesBySeason = async (season: Season) => {
+    try {
+      const { data: episodesData } = await supabase
+        .from('episodes')
+        .select('*')
+        .eq('season_id', season.id)
+        .order('episode_number', { ascending: true })
+
+      if (episodesData) {
+        setEpisodes(episodesData)
+      }
+    } catch (error) {
+      console.error('Error loading episodes:', error)
+    }
+  }
+
+  // Get playback ID based on content type
+  const getPlaybackId = () => {
+    if (title.content_type === 'series' && currentEpisode) {
+      return currentEpisode.mux_playback_id
+    }
+    return title.mux_playback_id
+  }
 
   // Hide controls after inactivity
   const resetHideControlsTimer = useCallback(() => {
@@ -34,6 +117,9 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
   // Save progress to Supabase (throttled to ~10 seconds)
   const saveProgress = useCallback(
     async (position: number) => {
+      // Only save if user is logged in
+      if (!user) return
+
       const now = Date.now()
       if (now - lastSaveTimeRef.current < 10000) return // Throttle to 10 seconds
 
@@ -43,31 +129,58 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
       lastSaveTimeRef.current = now
 
       try {
-        const { data: existing } = await supabase
-          .from('playback_progress')
-          .select('id')
-          .eq('title_id', title.id)
-          .single()
+        const progressData: any = {
+          user_id: user.id,
+          position_seconds: position,
+          updated_at: new Date().toISOString(),
+        }
 
-        if (existing) {
-          await supabase
+        if (title.content_type === 'series' && currentEpisode) {
+          // Save progress for episode
+          progressData.episode_id = currentEpisode.id
+          progressData.title_id = null
+
+          const { data: existing } = await supabase
             .from('playback_progress')
-            .update({
-              position_seconds: position,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('title_id', title.id)
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('episode_id', currentEpisode.id)
+            .maybeSingle()
+
+          if (existing) {
+            await supabase
+              .from('playback_progress')
+              .update(progressData)
+              .eq('id', existing.id)
+          } else {
+            await supabase.from('playback_progress').insert(progressData)
+          }
         } else {
-          await supabase.from('playback_progress').insert({
-            title_id: title.id,
-            position_seconds: position,
-          })
+          // Save progress for film/music video/podcast
+          progressData.title_id = title.id
+          progressData.episode_id = null
+
+          const { data: existing } = await supabase
+            .from('playback_progress')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('title_id', title.id)
+            .maybeSingle()
+
+          if (existing) {
+            await supabase
+              .from('playback_progress')
+              .update(progressData)
+              .eq('id', existing.id)
+          } else {
+            await supabase.from('playback_progress').insert(progressData)
+          }
         }
       } catch (error) {
         console.error('Error saving progress:', error)
       }
     },
-    [title.id, duration]
+    [user, title.id, title.content_type, currentEpisode, duration]
   )
 
   // Handle time update
@@ -83,13 +196,24 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
   const handleLoadedMetadata = useCallback(() => {
     if (playerRef.current) {
       setDuration(playerRef.current.duration)
-      
+
       // Resume from saved position
       if (initialPosition > 2 && initialPosition < playerRef.current.duration - 5) {
         playerRef.current.currentTime = initialPosition
       }
     }
   }, [initialPosition])
+
+  // Switch episode
+  const switchEpisode = (episode: Episode) => {
+    setCurrentEpisode(episode)
+    setShowEpisodeSelector(false)
+    setCurrentTime(0)
+    // Reset player with new episode
+    if (playerRef.current) {
+      playerRef.current.currentTime = 0
+    }
+  }
 
   // Keyboard controls
   useEffect(() => {
@@ -101,7 +225,11 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
-          onClose()
+          if (showEpisodeSelector) {
+            setShowEpisodeSelector(false)
+          } else {
+            onClose()
+          }
           break
         case ' ':
         case 'k':
@@ -136,7 +264,7 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, isPlaying, resetHideControlsTimer])
+  }, [onClose, isPlaying, resetHideControlsTimer, showEpisodeSelector])
 
   // Mouse movement and touch
   useEffect(() => {
@@ -180,42 +308,151 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
   }
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
+  const playbackId = getPlaybackId()
+  const isPodcast = title.content_type === 'podcast'
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
       {/* Background dimmed page */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Video player */}
+      {/* Video/Audio player */}
       <div className="relative w-full h-full flex items-center justify-center">
-        <MuxPlayer
-          ref={playerRef}
-          playbackId={title.mux_playback_id}
-          streamType="on-demand"
-          autoPlay
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          className="w-full h-full"
-          style={{
-            '--controls': 'none',
-            '--media-object-fit': 'contain',
-          } as React.CSSProperties}
-        />
+        {isPodcast ? (
+          // Audio-only player for podcasts
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Static artwork */}
+            <div
+              className="absolute inset-0 bg-cover bg-center blur-xl opacity-30"
+              style={{ backgroundImage: `url(${title.poster_url})` }}
+            />
+            <div className="relative z-10 flex flex-col items-center">
+              <img
+                src={title.poster_url}
+                alt={title.title}
+                className="w-96 h-96 object-cover rounded-lg shadow-2xl mb-8"
+              />
+            </div>
+            {/* Audio element */}
+            {playbackId && (
+              <audio
+                ref={playerRef as any}
+                src={`https://stream.mux.com/${playbackId}.m4a`}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+              />
+            )}
+          </div>
+        ) : (
+          // Video player
+          playbackId && (
+            <MuxPlayer
+              key={playbackId} // Force re-render on episode change
+              ref={playerRef}
+              playbackId={playbackId}
+              streamType="on-demand"
+              autoPlay
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              className="w-full h-full"
+              style={{
+                '--controls': 'none',
+                '--media-object-fit': 'contain',
+              } as React.CSSProperties}
+            />
+          )
+        )}
 
         {/* Thin progress bar (always visible) */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800 z-30">
           <div
             className="h-full bg-amber-glow transition-all duration-100"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
 
+        {/* Episode Selector (for series) */}
+        {showEpisodeSelector && title.content_type === 'series' && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80">
+            <div className="bg-gray-900 rounded-lg p-8 max-w-4xl w-full mx-8 max-h-[80vh] overflow-y-auto">
+              <h2 className="text-2xl font-bold mb-6">Episodes</h2>
+
+              {/* Season selector */}
+              <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+                {seasons.map((season) => (
+                  <button
+                    key={season.id}
+                    onClick={() => {
+                      setSelectedSeason(season)
+                      loadEpisodesBySeason(season)
+                    }}
+                    className={`
+                      px-4 py-2 rounded-lg whitespace-nowrap transition
+                      ${
+                        selectedSeason?.id === season.id
+                          ? 'bg-amber-glow text-black'
+                          : 'bg-gray-800 hover:bg-gray-700'
+                      }
+                    `}
+                  >
+                    {season.title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Episode list */}
+              <div className="space-y-2">
+                {episodes.map((episode) => (
+                  <button
+                    key={episode.id}
+                    onClick={() => switchEpisode(episode)}
+                    className={`
+                      w-full p-4 rounded-lg text-left transition
+                      ${
+                        currentEpisode?.id === episode.id
+                          ? 'bg-amber-glow/20 border-2 border-amber-glow'
+                          : 'bg-gray-800 hover:bg-gray-700'
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-2xl font-bold text-gray-400">
+                        {episode.episode_number}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{episode.title}</h3>
+                        {episode.description && (
+                          <p className="text-sm text-gray-400 line-clamp-2">
+                            {episode.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {formatTime(episode.runtime_seconds)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowEpisodeSelector(false)}
+                className="mt-6 w-full px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Custom controls */}
         <div
           className={`
-            absolute bottom-0 left-0 right-0 p-8 pt-32
+            absolute bottom-0 left-0 right-0 p-8 pt-32 z-10
             bg-gradient-to-t from-black/80 to-transparent
             transition-opacity duration-300
             ${showControls ? 'opacity-100' : 'opacity-0'}
@@ -251,8 +488,25 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
               {formatTime(currentTime)} / {formatTime(duration)}
             </div>
 
+            {/* Episode selector button (for series) */}
+            {title.content_type === 'series' && (
+              <button
+                onClick={() => setShowEpisodeSelector(true)}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-sm"
+              >
+                Episodes
+              </button>
+            )}
+
             {/* Spacer */}
             <div className="flex-1" />
+
+            {/* Auth notice for guests */}
+            {!user && (
+              <div className="text-sm text-gray-400">
+                Sign in to save progress
+              </div>
+            )}
 
             {/* Close button */}
             <button
@@ -270,11 +524,17 @@ export default function TheaterOverlay({ title, onClose, initialPosition = 0 }: 
             </button>
           </div>
 
-          {/* Title */}
-          <h2 className="text-2xl font-semibold">{title.title}</h2>
+          {/* Title and episode info */}
+          <div>
+            <h2 className="text-2xl font-semibold">{title.title}</h2>
+            {currentEpisode && (
+              <p className="text-sm text-gray-400 mt-1">
+                S{selectedSeason?.season_number} E{currentEpisode.episode_number}: {currentEpisode.title}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
   )
 }
-

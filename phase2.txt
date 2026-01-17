@@ -1,0 +1,86 @@
+PHASE 2 — ACCOUNTS & CONTENT DEPTH (TIGHT SPEC)
+1) AUTHENTICATION (REQUIRED)
+Scope
+Supabase email + password authentication
+No social logins
+No profiles
+No avatars
+Behavior
+Logged-in users:
+Resume playback
+Continue Watching persists across sessions
+Guest users:
+Can view content
+Do NOT persist playback progress
+Logout:
+Clears session
+Removes resume capability
+2) CONTENT STRUCTURE (REQUIRED)
+Title Types
+Each title must be one of:
+film
+series
+music_video
+podcast
+Series Structure
+Series contain seasons
+Seasons contain episodes
+Episode selection:
+Occurs inside Theater Mode
+No separate episode pages
+Theater overlay must support episode selection UI
+3) AUDIO CONTENT (LIMITED)
+Music Videos
+Treated exactly like films
+Same Mux video pipeline
+Appear in:
+Originals row
+OR dedicated Music Videos row
+Podcasts (Audio-Only)
+Uses Theater Mode overlay
+Static artwork or ambient background
+Minimal controls
+No autoplay
+No feeds
+No queues
+4) PLAYER RULES (UNCHANGED)
+One unified player system
+Theater Mode remains dominant
+Resume logic identical to Phase 1
+Audio uses the same overlay system as video
+5) ADMIN (PHASE 2 ONLY)
+Admin can:
+Create series
+Assign seasons and episodes
+Add podcasts and music videos
+Set content visibility
+Restrictions:
+No public uploads
+No creator dashboards
+6) UI RULES (LOCKED)
+Sliders remain the primary navigation
+Theater Mode behavior unchanged
+No dashboards
+No social UI
+No clutter
+7) ACCEPTANCE CHECKPOINTS
+Checkpoint 1 — Accounts
+Login / logout works
+Resume tied to authenticated user
+Guest users do not persist progress
+Checkpoint 2 — Series Playback
+Episodes play correctly
+Episode selector works inside Theater Mode
+Checkpoint 3 — Audio
+Podcasts play in Theater Mode
+No additional UI clutter introduced
+8) EXPLICITLY OUT OF SCOPE (DO NOT BUILD)
+Playlists
+Ads
+Payments
+Comments
+Likes
+Creator uploads
+Profiles
+FINAL RULE
+If a feature is not listed above, it is not Phase 2.
