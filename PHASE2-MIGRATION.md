@@ -22,14 +22,23 @@ Save this data somewhere safe.
 
 ### 2. Run Phase 2 Schema
 
-In your Supabase SQL Editor, run the contents of `supabase-schema-phase2.sql`.
+**Choose the correct script based on your situation:**
+
+#### If you have existing Phase 1 data (titles and progress):
+Run `supabase-migration-phase1-to-phase2.sql` in your Supabase SQL Editor.
 
 This will:
-- Add new content type enum (film, series, music_video, podcast)
-- Update titles table with `content_type` column
-- Create `seasons` and `episodes` tables for series
-- Update `playback_progress` to be user-specific
-- Update RLS policies for authentication
+- Add `content_type` column to existing titles table
+- Make `mux_playback_id` nullable (for series)
+- Add `description` column
+- Create `seasons` and `episodes` tables
+- **Backup and recreate** `playback_progress` table (old progress will be saved in `playback_progress_phase1_backup`)
+- Update all RLS policies
+
+#### If you're starting fresh (no Phase 1 data):
+Run `supabase-schema-phase2.sql` in your Supabase SQL Editor.
+
+This creates all tables from scratch with the correct Phase 2 structure.
 
 ### 3. Enable Email Auth in Supabase
 
@@ -50,27 +59,55 @@ No additional variables needed!
 
 ### 5. Data Migration
 
-If you have existing Phase 1 data:
+If you ran the migration script (`supabase-migration-phase1-to-phase2.sql`):
+
+✅ **Automatic:**
+- All existing titles are automatically set to `content_type = 'film'`
+- Old playback progress is backed up to `playback_progress_phase1_backup`
+- New playback_progress table requires authentication
+
+⚠️ **Important Notes:**
+- Phase 1 playback progress will NOT be migrated to Phase 2 (different schema)
+- Users must create accounts to save progress going forward
+- Old progress data is preserved in backup table for reference
+- Your title data (films) remains intact and will work immediately
+
+### 6. Verify Migration Success
+
+In Supabase SQL Editor, run these queries to verify:
 
 ```sql
--- Update all existing titles to be 'film' type (if not already set)
-UPDATE titles 
-SET content_type = 'film' 
-WHERE content_type IS NULL;
+-- Check titles have content_type
+SELECT COUNT(*), content_type FROM titles GROUP BY content_type;
+-- Should show all your titles as 'film'
 
--- Note: Existing playback_progress records will NOT work without authentication
--- Users will need to sign in and their old progress will be lost
--- This is expected behavior for Phase 2
+-- Check new tables exist
+SELECT COUNT(*) FROM seasons;
+SELECT COUNT(*) FROM episodes;
+-- Should return 0 (empty but tables exist)
+
+-- Check old progress was backed up
+SELECT COUNT(*) FROM playback_progress_phase1_backup;
+-- Should show your old progress count
+
+-- Check new progress table
+SELECT COUNT(*) FROM playback_progress;
+-- Should be 0 (empty, ready for authenticated users)
 ```
 
-### 6. Test Your Migration
+### 7. Test Your Migration
 
 1. Start the dev server: `npm run dev`
 2. Visit `http://localhost:3000`
-3. You should see the header with "Sign In" button
-4. Try creating an account
-5. Test playback with resume functionality
-6. As a logged-out user, verify progress doesn't save
+3. You should see:
+   - Header with "Sign In" button
+   - Your existing titles displaying correctly
+   - No Continue Watching row (no progress yet)
+4. Create an account and sign in
+5. Play a video and verify progress saves
+6. Refresh page - Continue Watching should appear
+7. Sign out and verify Continue Watching disappears
+8. Play as guest and verify progress doesn't save
 
 ## 🆕 What's New in Phase 2
 
