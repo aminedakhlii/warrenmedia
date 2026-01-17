@@ -1,4 +1,4 @@
-# Warren Media Streaming
+no# Warren Media Streaming
 
 A cinema-first streaming platform built with Next.js, featuring fullscreen theater mode playback, user authentication, and support for films, series, music videos, and podcasts.
 
@@ -41,7 +41,7 @@ A cinema-first streaming platform built with Next.js, featuring fullscreen theat
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/aminedakhlii/warrenmedia
 cd warrenmedia
 ```
 
