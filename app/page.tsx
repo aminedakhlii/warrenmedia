@@ -53,27 +53,55 @@ export default function HomePage() {
 
       // Fetch continue watching (only for logged-in users)
       if (user) {
-        const { data: progressData } = await supabase
+        // Fetch progress for regular titles (films, music videos, podcasts)
+        const { data: titleProgress } = await supabase
           .from('playback_progress')
           .select(`
             *,
-            title:titles(*),
-            episode:episodes(*)
+            title:titles(*)
           `)
           .eq('user_id', user.id)
+          .not('title_id', 'is', null)
+          .gt('position_seconds', 2)
           .order('updated_at', { ascending: false })
-          .limit(20)
 
-        if (progressData) {
-          // Extract unique titles from progress
-          const titlesMap = new Map<string, Title>()
-          progressData.forEach((p: any) => {
-            if (p.title && p.position_seconds > 2) {
-              titlesMap.set(p.title.id, p.title)
-            }
-          })
-          setContinueWatching(Array.from(titlesMap.values()))
-        }
+        // Fetch progress for series episodes (need to get the series title)
+        const { data: episodeProgress } = await supabase
+          .from('playback_progress')
+          .select(`
+            *,
+            episode:episodes(
+              *,
+              season:seasons(
+                *,
+                series:titles(*)
+              )
+            )
+          `)
+          .eq('user_id', user.id)
+          .not('episode_id', 'is', null)
+          .gt('position_seconds', 2)
+          .order('updated_at', { ascending: false })
+
+        // Combine and deduplicate titles
+        const titlesMap = new Map<string, Title>()
+        
+        // Add regular titles
+        titleProgress?.forEach((p: any) => {
+          if (p.title) {
+            titlesMap.set(p.title.id, p.title)
+          }
+        })
+
+        // Add series titles (from episodes)
+        episodeProgress?.forEach((p: any) => {
+          if (p.episode?.season?.series) {
+            const series = p.episode.season.series
+            titlesMap.set(series.id, series)
+          }
+        })
+
+        setContinueWatching(Array.from(titlesMap.values()).slice(0, 20))
       } else {
         setContinueWatching([])
       }

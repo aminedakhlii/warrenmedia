@@ -180,7 +180,7 @@ export default function RowSlider({
                     ? isKeyboardNavigating
                       ? 'glow-amber-strong scale-105'
                       : 'glow-amber scale-105'
-                    : 'hover:scale-105'
+                    : 'hover:scale-105 hover:glow-amber'
                 }
               `}
               onClick={() => {
@@ -189,6 +189,7 @@ export default function RowSlider({
                   onTitleClick(titleItem)
                 }
               }}
+              onMouseEnter={() => !isDragging && setFocusedIndex(-1)}
               tabIndex={focusedIndex === index ? 0 : -1}
             >
               <Image

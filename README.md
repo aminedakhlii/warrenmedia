@@ -1,4 +1,4 @@
-no# Warren Media Streaming
+# Warren Media Streaming
 
 A cinema-first streaming platform built with Next.js, featuring fullscreen theater mode playback, user authentication, and support for films, series, music videos, and podcasts.
 
