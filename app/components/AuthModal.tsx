@@ -14,21 +14,32 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       if (mode === 'login') {
         const { error } = await signIn(email, password)
         if (error) throw error
+        onSuccess()
       } else {
-        const { error } = await signUp(email, password)
+        const { data, error } = await signUp(email, password)
         if (error) throw error
+        
+        // Check if email confirmation is required
+        if (data?.user && !data.session) {
+          setSuccess('Account created! Please check your email to confirm your account.')
+        } else {
+          // Auto-confirmed (if email confirmation is disabled)
+          setSuccess('Account created successfully!')
+          setTimeout(() => onSuccess(), 2000)
+        }
       }
-      onSuccess()
     } catch (err: any) {
       setError(err.message || 'Authentication failed')
     } finally {
@@ -84,6 +95,10 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
           {error && (
             <div className="p-3 bg-red-900/50 rounded-lg text-sm">{error}</div>
+          )}
+
+          {success && (
+            <div className="p-3 bg-green-900/50 rounded-lg text-sm">{success}</div>
           )}
 
           <button

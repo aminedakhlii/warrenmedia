@@ -58,6 +58,7 @@ npm install
 3. **Enable Email Authentication**:
    - Go to Authentication → Providers
    - Enable Email provider
+   - (Optional) For easier testing, disable "Confirm email" under Email Auth settings
 4. In the SQL Editor, run the schema from `supabase-schema-phase2.sql`:
 
 ```sql

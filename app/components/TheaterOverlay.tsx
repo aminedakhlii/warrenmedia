@@ -318,53 +318,46 @@ export default function TheaterOverlay({
 
       {/* Video/Audio player */}
       <div className="relative w-full h-full flex items-center justify-center">
-        {isPodcast ? (
-          // Audio-only player for podcasts
-          <div className="relative w-full h-full flex items-center justify-center">
-            {/* Static artwork */}
-            <div
-              className="absolute inset-0 bg-cover bg-center blur-xl opacity-30"
-              style={{ backgroundImage: `url(${title.poster_url})` }}
-            />
-            <div className="relative z-10 flex flex-col items-center">
-              <img
-                src={title.poster_url}
-                alt={title.title}
-                className="w-96 h-96 object-cover rounded-lg shadow-2xl mb-8"
-              />
-            </div>
-            {/* Audio element */}
-            {playbackId && (
-              <audio
-                ref={playerRef as any}
-                src={`https://stream.mux.com/${playbackId}.m4a`}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
-              />
+        {playbackId && (
+          <>
+            {isPodcast && (
+              // Static artwork overlay for podcasts
+              <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+                {/* Blurred background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center blur-xl opacity-30"
+                  style={{ backgroundImage: `url(${title.poster_url})` }}
+                />
+                {/* Poster artwork */}
+                <div className="relative z-10 flex flex-col items-center">
+                  <img
+                    src={title.poster_url}
+                    alt={title.title}
+                    className="w-96 h-96 object-cover rounded-lg shadow-2xl"
+                  />
+                </div>
+              </div>
             )}
-          </div>
-        ) : (
-          // Video player
-          playbackId && (
+            
+            {/* Mux Player for both video and audio */}
             <MuxPlayer
               key={playbackId} // Force re-render on episode change
               ref={playerRef}
               playbackId={playbackId}
               streamType="on-demand"
               autoPlay
+              audio={isPodcast} // Audio-only mode for podcasts
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
-              className="w-full h-full"
+              className={isPodcast ? 'hidden' : 'w-full h-full'}
               style={{
                 '--controls': 'none',
                 '--media-object-fit': 'contain',
               } as React.CSSProperties}
             />
-          )
+          </>
         )}
 
         {/* Thin progress bar (always visible) */}
