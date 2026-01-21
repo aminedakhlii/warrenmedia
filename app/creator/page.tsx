@@ -293,7 +293,7 @@ function CreatorUploadInterface({ creator, user }: { creator: Creator; user: any
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?[0]
+    const file = e.target.files?.[0]
     if (!file) return
 
     if (!uploadForm.title) {
