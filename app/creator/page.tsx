@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { supabase, getCurrentUser, getFeatureFlag, type Creator } from '../lib/supabaseClient'
 
 export default function CreatorPortalPage() {
@@ -85,12 +86,12 @@ export default function CreatorPortalPage() {
           <p className="text-gray-400">
             The creator upload feature is currently not available.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block mt-6 px-6 py-3 bg-amber-glow hover:bg-amber-600 rounded-lg transition"
           >
             Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -103,12 +104,12 @@ export default function CreatorPortalPage() {
         <div className="max-w-md text-center">
           <h1 className="text-3xl font-bold mb-4">Creator Portal</h1>
           <p className="text-gray-400 mb-6">Please sign in to access the creator portal.</p>
-          <a
+          <Link
             href="/"
             className="inline-block px-6 py-3 bg-amber-glow hover:bg-amber-600 rounded-lg transition"
           >
             Go to Home & Sign In
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -191,12 +192,12 @@ export default function CreatorPortalPage() {
           </form>
 
           <div className="mt-8">
-            <a
+            <Link
               href="/"
               className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
             >
               ← Back to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -223,12 +224,12 @@ export default function CreatorPortalPage() {
           </div>
 
           <div className="mt-8">
-            <a
+            <Link
               href="/"
               className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
             >
               ← Back to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -257,19 +258,127 @@ export default function CreatorPortalPage() {
           </div>
 
           <div className="mt-8">
-            <a
+            <Link
               href="/"
               className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
             >
               ← Back to Home
-            </a>
+            </Link>
           </div>
         </div>
       </div>
     )
   }
 
-  // Approved - Show upload interface (placeholder for now)
+  // Approved - Show upload interface
+  return <CreatorUploadInterface creator={creator} user={user} />
+}
+
+// Creator Upload Interface Component
+function CreatorUploadInterface({ creator, user }: { creator: Creator; user: any }) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [message, setMessage] = useState('')
+  const [uploadUrl, setUploadUrl] = useState<string | null>(null)
+  const [muxError, setMuxError] = useState(false)
+
+  // Upload form
+  const [uploadForm, setUploadForm] = useState({
+    title: '',
+    description: '',
+    poster_url: '',
+    category: 'originals' as 'trending' | 'originals' | 'new_releases' | 'music_videos',
+  })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?[0]
+    if (!file) return
+
+    if (!uploadForm.title) {
+      setMessage('Please enter a title first')
+      return
+    }
+
+    setUploading(true)
+    setMessage('')
+    setUploadProgress(0)
+    setMuxError(false)
+
+    try {
+      // Create Mux direct upload URL
+      const response = await fetch('/api/mux-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          creatorId: creator.id,
+          metadata: {
+            title: uploadForm.title,
+            description: uploadForm.description,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (data.needsSetup) {
+          setMuxError(true)
+          setMessage(
+            'Mux is not configured. Please add MUX_TOKEN_ID and MUX_TOKEN_SECRET to your .env.local file.'
+          )
+          return
+        }
+        throw new Error(data.error || 'Failed to create upload')
+      }
+
+      setUploadUrl(data.uploadUrl)
+
+      // Upload to Mux
+      const uploadResponse = await fetch(data.uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload video')
+      }
+
+      // Save to database
+      const { error: dbError } = await supabase.from('titles').insert({
+        title: uploadForm.title,
+        description: uploadForm.description,
+        poster_url: uploadForm.poster_url || 'https://via.placeholder.com/240x360?text=Processing',
+        mux_playback_id: 'processing', // Will be updated by webhook
+        content_type: 'film',
+        category: uploadForm.category,
+        creator_id: creator.id,
+        is_creator_content: true,
+      })
+
+      if (dbError) throw dbError
+
+      setMessage('✅ Video uploaded successfully! Processing may take a few minutes.')
+      setUploadForm({
+        title: '',
+        description: '',
+        poster_url: '',
+        category: 'originals',
+      })
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    } catch (error) {
+      setMessage('Error: ' + (error as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
@@ -277,27 +386,144 @@ export default function CreatorPortalPage() {
         <p className="text-gray-400 mb-8">Upload & Manage Your Content</p>
 
         <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 mb-8">
-          <p className="text-green-400 font-semibold mb-2">✅ You're an Approved Creator!</p>
+          <p className="text-green-400 font-semibold mb-2">✅ Welcome, {creator.name}!</p>
           <p className="text-sm text-gray-300">
-            You can now upload videos to Warren Media. Content will be reviewed before going live.
+            You can now upload videos to Warren Media. All uploads are subject to review.
           </p>
         </div>
 
-        <div className="bg-gray-900 rounded-lg p-8 text-center">
-          <p className="text-gray-400 text-lg mb-4">🚧 Upload Interface Coming Soon</p>
-          <p className="text-sm text-gray-500">
-            Mux direct upload integration will be added here. For now, contact an admin to upload
-            content.
-          </p>
+        {muxError && (
+          <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-6 mb-8">
+            <p className="text-amber-400 font-semibold mb-2">⚠️ Mux Setup Required</p>
+            <p className="text-sm text-gray-300 mb-4">
+              To enable video uploads, you need to configure Mux credentials:
+            </p>
+            <ol className="text-sm text-gray-300 space-y-2 ml-4 list-decimal">
+              <li>Sign up at <a href="https://mux.com" target="_blank" className="text-amber-400 underline">mux.com</a></li>
+              <li>Get your API Token ID and Secret from Settings → Access Tokens</li>
+              <li>Add to your .env.local file:
+                <pre className="mt-2 p-2 bg-black/30 rounded text-xs">
+MUX_TOKEN_ID=your-token-id{'\n'}
+MUX_TOKEN_SECRET=your-token-secret
+                </pre>
+              </li>
+              <li>Restart your development server</li>
+            </ol>
+          </div>
+        )}
+
+        {message && (
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              message.includes('Error') || message.includes('⚠️')
+                ? 'bg-red-900/50'
+                : message.includes('✅')
+                ? 'bg-green-900/50'
+                : 'bg-blue-900/50'
+            }`}
+          >
+            {message}
+          </div>
+        )}
+
+        {/* Upload Form */}
+        <div className="bg-gray-900 rounded-lg p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Upload New Video</h2>
+          <form className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Title *</label>
+              <input
+                type="text"
+                value={uploadForm.title}
+                onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                required
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Description</label>
+              <textarea
+                value={uploadForm.description}
+                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                rows={4}
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Poster Image URL</label>
+              <input
+                type="url"
+                value={uploadForm.poster_url}
+                onChange={(e) => setUploadForm({ ...uploadForm, poster_url: e.target.value })}
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                placeholder="https://example.com/poster.jpg"
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Category *</label>
+              <select
+                value={uploadForm.category}
+                onChange={(e) =>
+                  setUploadForm({
+                    ...uploadForm,
+                    category: e.target.value as typeof uploadForm.category,
+                  })
+                }
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                disabled={uploading}
+              >
+                <option value="trending">Trending</option>
+                <option value="originals">Originals</option>
+                <option value="new_releases">New Releases</option>
+                <option value="music_videos">Music Videos</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Video File *</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleFileSelect}
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-amber-glow file:text-black hover:file:bg-amber-600"
+                disabled={uploading}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Supported formats: MP4, MOV, AVI. Max size: 5GB
+              </p>
+            </div>
+
+            {uploading && (
+              <div className="p-4 bg-gray-800 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm">Uploading...</span>
+                  <span className="text-sm">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-amber-glow h-2 rounded-full transition-all"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </form>
         </div>
 
         <div className="mt-8">
-          <a
+          <Link
             href="/"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
           >
             ← Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

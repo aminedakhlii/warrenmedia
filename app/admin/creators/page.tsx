@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { supabase, type Creator } from '../../lib/supabaseClient'
 
 export default function AdminCreatorsPage() {
@@ -54,6 +55,40 @@ export default function AdminCreatorsPage() {
       fetchCreators()
     } catch (error) {
       setMessage('Error updating creator: ' + (error as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleDeleteCreator(creatorId: string, creatorName: string) {
+    if (!confirm(`⚠️ WARNING: Delete creator "${creatorName}"?\n\nThis will permanently delete:\n• The creator account\n• All content they uploaded\n• All associated data\n\nThis action cannot be undone.`)) {
+      return
+    }
+
+    setLoading(true)
+    setMessage('')
+
+    try {
+      // First, delete all titles created by this creator
+      const { error: titlesError } = await supabase
+        .from('titles')
+        .delete()
+        .eq('creator_id', creatorId)
+
+      if (titlesError) throw titlesError
+
+      // Then delete the creator
+      const { error: creatorError } = await supabase
+        .from('creators')
+        .delete()
+        .eq('id', creatorId)
+
+      if (creatorError) throw creatorError
+
+      setMessage(`Creator "${creatorName}" and all their content has been deleted.`)
+      fetchCreators()
+    } catch (error) {
+      setMessage('Error deleting creator: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -194,6 +229,20 @@ export default function AdminCreatorsPage() {
                     Reviewed: {new Date(creator.reviewed_at).toLocaleDateString()}
                   </p>
                 )}
+
+                {/* Delete Creator */}
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <button
+                    onClick={() => handleDeleteCreator(creator.id, creator.name)}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition text-sm disabled:opacity-50"
+                  >
+                    🗑️ Delete Creator & Content
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Permanently removes creator and all their uploaded content
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -201,18 +250,18 @@ export default function AdminCreatorsPage() {
 
         {/* Navigation */}
         <div className="mt-8 flex gap-4">
-          <a
+          <Link
             href="/admin/titles"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
           >
             ← Manage Titles
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/ads"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
           >
             Manage Ads →
-          </a>
+          </Link>
         </div>
       </div>
     </div>

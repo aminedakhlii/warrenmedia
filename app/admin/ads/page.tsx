@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { supabase, type Title, type TitleAdConfig } from '../../lib/supabaseClient'
 
 export default function AdminAdsPage() {
@@ -250,18 +251,18 @@ export default function AdminAdsPage() {
 
         {/* Navigation */}
         <div className="mt-8 flex gap-4">
-          <a
+          <Link
             href="/admin/creators"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
           >
             ← Creators
-          </a>
-          <a
+          </Link>
+          <Link
             href="/admin/settings"
             className="inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
           >
             Settings →
-          </a>
+          </Link>
         </div>
       </div>
     </div>
