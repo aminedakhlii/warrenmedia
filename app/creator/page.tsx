@@ -283,14 +283,60 @@ function CreatorUploadInterface({ creator, user }: { creator: Creator; user: any
   const [muxError, setMuxError] = useState(false)
 
   // Upload form
+  const [contentType, setContentType] = useState<'film' | 'music_video' | 'podcast'>('film')
   const [uploadForm, setUploadForm] = useState({
     title: '',
     description: '',
     poster_url: '',
     category: 'originals' as 'trending' | 'originals' | 'new_releases' | 'music_videos',
   })
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [uploadedTitle, setUploadedTitle] = useState('')
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Poll for playback ID from Mux
+  async function pollForPlaybackId(uploadId: string, titleId: string, attempts = 0) {
+    if (attempts > 20) {
+      console.log('Max polling attempts reached for', uploadId)
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/mux-status?uploadId=${uploadId}`)
+      const data = await response.json()
+
+      if (data.playbackId && data.ready) {
+        // Update the title with the playback ID
+        await supabase
+          .from('titles')
+          .update({
+            mux_playback_id: data.playbackId,
+            runtime_seconds: Math.floor(data.duration || 0),
+          })
+          .eq('id', titleId)
+
+        // Update mux_uploads status
+        await supabase
+          .from('mux_uploads')
+          .update({
+            mux_asset_id: data.assetId,
+            mux_playback_id: data.playbackId,
+            status: 'ready',
+          })
+          .eq('mux_upload_id', uploadId)
+
+        console.log('Video ready:', data.playbackId)
+      } else {
+        // Poll again in 5 seconds
+        setTimeout(() => pollForPlaybackId(uploadId, titleId, attempts + 1), 5000)
+      }
+    } catch (error) {
+      console.error('Error polling Mux status:', error)
+      // Retry
+      setTimeout(() => pollForPlaybackId(uploadId, titleId, attempts + 1), 5000)
+    }
+  }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -335,34 +381,67 @@ function CreatorUploadInterface({ creator, user }: { creator: Creator; user: any
 
       setUploadUrl(data.uploadUrl)
 
-      // Upload to Mux
-      const uploadResponse = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+      // Upload to Mux with progress tracking
+      const xhr = new XMLHttpRequest()
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setUploadProgress(percentComplete)
+        }
       })
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload video')
-      }
-
-      // Save to database
-      const { error: dbError } = await supabase.from('titles').insert({
-        title: uploadForm.title,
-        description: uploadForm.description,
-        poster_url: uploadForm.poster_url || 'https://via.placeholder.com/240x360?text=Processing',
-        mux_playback_id: 'processing', // Will be updated by webhook
-        content_type: 'film',
-        category: uploadForm.category,
-        creator_id: creator.id,
-        is_creator_content: true,
+      await new Promise((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response)
+          } else {
+            reject(new Error('Upload failed'))
+          }
+        })
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')))
+        
+        xhr.open('PUT', data.uploadUrl)
+        xhr.setRequestHeader('Content-Type', file.type)
+        xhr.send(file)
       })
+
+      setUploadProgress(100)
+      setMessage('Processing video...')
+
+      // Save to database with upload ID for tracking
+      const { data: titleData, error: dbError } = await supabase
+        .from('titles')
+        .insert({
+          title: uploadForm.title,
+          description: uploadForm.description,
+          poster_url: uploadForm.poster_url || 'https://via.placeholder.com/240x360?text=Processing',
+          mux_playback_id: null, // Will be updated when processing completes
+          content_type: contentType,
+          category: uploadForm.category,
+          creator_id: creator.id,
+          is_creator_content: true,
+        })
+        .select()
+        .single()
 
       if (dbError) throw dbError
 
-      setMessage('✅ Video uploaded successfully! Processing may take a few minutes.')
+      // Track the upload for status checking
+      await supabase.from('mux_uploads').insert({
+        creator_id: creator.id,
+        mux_upload_id: data.uploadId,
+        status: 'asset_created',
+        title_metadata: { title_id: titleData.id },
+      })
+
+      // Poll for playback ID
+      pollForPlaybackId(data.uploadId, titleData.id)
+
+      // Show success and reset form
+      setUploadedTitle(uploadForm.title)
+      setShowSuccessModal(true)
+      setMessage('')
       setUploadForm({
         title: '',
         description: '',
@@ -381,6 +460,30 @@ function CreatorUploadInterface({ creator, user }: { creator: Creator; user: any
 
   return (
     <div className="min-h-screen p-8">
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-gray-900 rounded-lg p-8 max-w-md mx-4 border-2 border-green-600">
+            <div className="text-center">
+              <div className="text-6xl mb-4">✅</div>
+              <h2 className="text-2xl font-bold mb-2 text-green-400">Upload Successful!</h2>
+              <p className="text-gray-300 mb-4">
+                "{uploadedTitle}" has been uploaded and is now processing.
+              </p>
+              <p className="text-sm text-gray-400 mb-6">
+                Processing usually takes 2-5 minutes. Your video will be available once processing is complete.
+              </p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full px-6 py-3 bg-amber-glow hover:bg-amber-600 rounded-lg font-semibold transition"
+              >
+                Upload Another
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-2">Creator Portal</h1>
         <p className="text-gray-400 mb-8">Upload & Manage Your Content</p>
@@ -428,8 +531,25 @@ MUX_TOKEN_SECRET=your-token-secret
 
         {/* Upload Form */}
         <div className="bg-gray-900 rounded-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Upload New Video</h2>
+          <h2 className="text-2xl font-semibold mb-4">Upload New Content</h2>
           <form className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Content Type *</label>
+              <select
+                value={contentType}
+                onChange={(e) => setContentType(e.target.value as typeof contentType)}
+                className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                disabled={uploading}
+              >
+                <option value="film">Film / Video</option>
+                <option value="music_video">Music Video</option>
+                <option value="podcast">Podcast (Audio)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Note: Series uploads coming soon. Contact admin for series content.
+              </p>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-2">Title *</label>
               <input

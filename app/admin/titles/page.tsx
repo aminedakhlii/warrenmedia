@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase, type Title, type Season, type Episode, ContentType } from '../../lib/supabaseClient'
 
 export default function AdminTitlesPage() {
   const [titles, setTitles] = useState<Title[]>([])
   const [contentType, setContentType] = useState<ContentType>('film')
+  const [uploadMode, setUploadMode] = useState<'upload' | 'playback_id'>('upload')
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const [formData, setFormData] = useState({
     title: '',
     poster_url: '',
@@ -76,8 +81,164 @@ export default function AdminTitlesPage() {
     }
   }
 
+  // Poll for playback ID from Mux
+  async function pollForPlaybackId(uploadId: string, titleId: string, attempts = 0): Promise<void> {
+    if (attempts > 20) {
+      console.log('Max polling attempts reached for', uploadId)
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/mux-status?uploadId=${uploadId}`)
+      const data = await response.json()
+
+      if (data.playbackId && data.ready) {
+        // Update the title with the playback ID
+        await supabase
+          .from('titles')
+          .update({
+            mux_playback_id: data.playbackId,
+            runtime_seconds: Math.floor(data.duration || 0),
+          })
+          .eq('id', titleId)
+
+        console.log('Video ready:', data.playbackId)
+        fetchTitles() // Refresh list
+      } else {
+        // Poll again in 5 seconds
+        setTimeout(() => pollForPlaybackId(uploadId, titleId, attempts + 1), 5000)
+      }
+    } catch (error) {
+      console.error('Error polling Mux status:', error)
+      // Retry
+      setTimeout(() => pollForPlaybackId(uploadId, titleId, attempts + 1), 5000)
+    }
+  }
+
+  async function handleVideoUpload(file: File) {
+    if (!formData.title) {
+      setMessage('Please enter a title first')
+      return
+    }
+
+    setUploading(true)
+    setMessage('Creating upload...')
+    setUploadProgress(0)
+
+    try {
+      // Create Mux direct upload URL
+      const response = await fetch('/api/mux-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metadata: {
+            title: formData.title,
+            description: formData.description,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create upload')
+      }
+
+      setMessage('Uploading video...')
+
+      // Upload to Mux with progress tracking
+      const xhr = new XMLHttpRequest()
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100)
+          setUploadProgress(percentComplete)
+        }
+      })
+
+      await new Promise((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response)
+          } else {
+            reject(new Error('Upload failed'))
+          }
+        })
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')))
+        
+        xhr.open('PUT', data.uploadUrl)
+        xhr.setRequestHeader('Content-Type', file.type)
+        xhr.send(file)
+      })
+
+      setUploadProgress(100)
+      setMessage('Processing video...')
+
+      // Save to database
+      const titleData: any = {
+        ...formData,
+        content_type: contentType,
+        mux_playback_id: null, // Will be updated when processing completes
+        poster_url: formData.poster_url || 'https://via.placeholder.com/240x360?text=Processing',
+      }
+
+      const { data: titleDbData, error } = await supabase
+        .from('titles')
+        .insert([titleData])
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Track the upload for status checking
+      await supabase.from('mux_uploads').insert({
+        mux_upload_id: data.uploadId,
+        status: 'asset_created',
+        title_metadata: { title_id: titleDbData.id },
+      })
+
+      // Poll for playback ID
+      pollForPlaybackId(data.uploadId, titleDbData.id)
+
+      setMessage('✅ Video uploaded! Processing in background...')
+      setFormData({
+        title: '',
+        poster_url: '',
+        mux_playback_id: '',
+        category: 'trending',
+        runtime_seconds: 0,
+        description: '',
+      })
+      setUploading(false)
+      setUploadProgress(0)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      await fetchTitles()
+    } catch (error) {
+      console.error('Upload error:', error)
+      setMessage(`❌ Error: ${(error as Error).message}`)
+      setUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      await handleVideoUpload(file)
+    }
+  }
+
   const handleSubmitTitle = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // If in upload mode, prompt user to upload file
+    if (uploadMode === 'upload' && contentType !== 'series') {
+      setMessage('⚠️ Please upload a video file using the upload box above')
+      return
+    }
+    
     setLoading(true)
     setMessage('')
 
@@ -96,7 +257,7 @@ export default function AdminTitlesPage() {
 
       if (error) throw error
 
-      setMessage('Title added successfully!')
+      setMessage('✅ Title added successfully!')
       setFormData({
         title: '',
         poster_url: '',
@@ -107,7 +268,7 @@ export default function AdminTitlesPage() {
       })
       fetchTitles()
     } catch (error) {
-      setMessage('Error adding title: ' + (error as Error).message)
+      setMessage('❌ Error adding title: ' + (error as Error).message)
     } finally {
       setLoading(false)
     }
@@ -257,17 +418,81 @@ export default function AdminTitlesPage() {
 
               {contentType !== 'series' && (
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Mux Playback ID {contentType === 'podcast' && '(Audio)'}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.mux_playback_id}
-                    onChange={(e) => setFormData({ ...formData, mux_playback_id: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                    placeholder="abc123xyz..."
-                    required={contentType !== 'series'}
-                  />
+                  <div className="flex items-center gap-4 mb-2">
+                    <label className="block text-sm font-medium">
+                      Video Source {contentType === 'podcast' && '(Audio)'}
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setUploadMode('upload')}
+                        className={`px-3 py-1 text-xs rounded ${
+                          uploadMode === 'upload'
+                            ? 'bg-amber-glow text-black'
+                            : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        Upload File
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUploadMode('playback_id')}
+                        className={`px-3 py-1 text-xs rounded ${
+                          uploadMode === 'playback_id'
+                            ? 'bg-amber-glow text-black'
+                            : 'bg-gray-700 hover:bg-gray-600'
+                        }`}
+                      >
+                        Enter Playback ID
+                      </button>
+                    </div>
+                  </div>
+
+                  {uploadMode === 'playback_id' ? (
+                    <input
+                      type="text"
+                      value={formData.mux_playback_id}
+                      onChange={(e) => setFormData({ ...formData, mux_playback_id: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                      placeholder="abc123xyz..."
+                      required={contentType !== 'series'}
+                    />
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
+                      {uploading ? (
+                        <div>
+                          <div className="mb-2 text-amber-400">Uploading... {uploadProgress}%</div>
+                          <div className="w-full bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-amber-glow h-2 rounded-full transition-all"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">{message}</p>
+                        </div>
+                      ) : (
+                        <>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="video/*,audio/*"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            id="admin-file-input"
+                          />
+                          <label
+                            htmlFor="admin-file-input"
+                            className="cursor-pointer inline-block px-6 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
+                          >
+                            📁 Choose {contentType === 'podcast' ? 'Audio' : 'Video'} File
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2">
+                            File will be uploaded to Mux and processed automatically
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

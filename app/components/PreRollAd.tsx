@@ -21,9 +21,13 @@ export default function PreRollAd({
   sessionId,
   onComplete,
 }: PreRollAdProps) {
-  const playerRef = useRef<HTMLVideoElement>(null)
+  const playerRef = useRef<any>(null)
   const [timeRemaining, setTimeRemaining] = useState(adDurationSeconds)
   const [adLogged, setAdLogged] = useState(false)
+  const [error, setError] = useState(false)
+
+  // Check if adUrl is a playback ID (no protocol) or full URL
+  const isPlaybackId = adUrl && !adUrl.includes('://')
 
   useEffect(() => {
     // Log ad impression on mount (started)
@@ -31,9 +35,22 @@ export default function PreRollAd({
     setAdLogged(true)
   }, [])
 
+  useEffect(() => {
+    // Auto-skip if error or if player doesn't load within 3 seconds
+    const timeout = setTimeout(() => {
+      if (!playerRef.current || error) {
+        console.warn('Ad failed to load, skipping...')
+        onComplete()
+      }
+    }, 3000)
+
+    return () => clearTimeout(timeout)
+  }, [error, onComplete])
+
   const handleTimeUpdate = () => {
-    if (playerRef.current) {
-      const remaining = Math.ceil(playerRef.current.duration - playerRef.current.currentTime)
+    const player = playerRef.current
+    if (player && player.currentTime && player.duration) {
+      const remaining = Math.ceil(player.duration - player.currentTime)
       setTimeRemaining(remaining)
     }
   }
@@ -46,18 +63,47 @@ export default function PreRollAd({
     onComplete()
   }
 
+  const handleError = () => {
+    console.error('Ad playback error')
+    setError(true)
+  }
+
+  const handleLoadStart = () => {
+    console.log('Ad loading...')
+  }
+
+  const handleCanPlay = () => {
+    console.log('Ad ready to play')
+    // Force play if not already playing
+    if (playerRef.current && playerRef.current.paused) {
+      playerRef.current.play().catch((err: Error) => {
+        console.error('Autoplay failed:', err)
+        setError(true)
+      })
+    }
+  }
+
+  if (error) {
+    // Skip ad on error
+    return null
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
       {/* Ad Player */}
       <div className="relative w-full h-full">
         <MuxPlayer
           ref={playerRef}
-          src={adUrl}
+          playbackId={isPlaybackId ? adUrl : undefined}
+          src={!isPlaybackId ? adUrl : undefined}
           streamType="on-demand"
-          autoPlay
+          autoPlay="any"
           muted={false}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded}
+          onError={handleError}
+          onLoadStart={handleLoadStart}
+          onCanPlay={handleCanPlay}
           className="w-full h-full"
           style={{
             '--controls': 'none',

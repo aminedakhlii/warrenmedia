@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       uploadId: uploadData.data.id,
       uploadUrl: uploadData.data.url,
-      assetId: uploadData.data.asset_id,
     })
   } catch (error) {
     console.error('Error creating Mux upload:', error)
