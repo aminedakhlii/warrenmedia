@@ -1,0 +1,131 @@
+Phase 3 (Monetization + Controlled Creator Uploads)
+Phase 3 is ads + controlled creator uploads together, implemented exactly as written below.
+Do not implement features outside this scope.
+Proceed with backend and admin groundwork only.
+Context
+This project already has:
+Phase 1: Core platform ✅ 
+Phase 2: Accounts + content depth ✔️ 
+Phase 3 must extend Phases 1–2 without redesigning, refactoring, or altering existing UI/UX.
+All Phase 3 functionality must be behind feature flags and not user-visible until Phase 2 is formally accepted.
+Global Rules (Hard Constraints)
+Do NOT redesign UI
+Do NOT alter Theater Mode
+Do NOT alter sliders, navigation, or branding
+Do NOT expose any Phase 3 features publicly
+Do NOT add subscriptions, payments, tips, or dashboards
+Keep implementations minimal and internal
+No speculative features
+Phase 3 Purpose (Single Sentence)
+Enable revenue generation and controlled creator uploads while preserving a premium, cinema-first experience.
+1) Creator Uploads — Controlled Access (Required)
+Access Model
+No open uploads
+No public creator signup
+Creators are admin-approved only
+Creator States
+pending
+approved
+rejected
+Creator Capabilities (Approved Only)
+Upload videos using Mux direct upload
+Provide metadata:
+title
+description
+poster image
+Assign exactly one category per title (same category rules as Phase 1/2)
+Explicit Restrictions
+Creators do NOT see:
+revenue
+analytics
+ads
+No creator dashboards beyond:
+upload
+submission status
+2) Admin — Creator Control (Internal Only)
+Admin must be able to:
+Review creator applications
+Approve or reject creators
+Enable or disable monetization per title
+Remove or hide creator content
+Admin UI is internal only and minimal.
+3) Monetization — Ads (Quiet Implementation)
+Ad Type
+Pre-roll only
+No mid-roll
+No post-roll
+Controls
+Admin toggle per title:
+ads ON / OFF
+Admin-set ad duration (e.g. 15–30 seconds)
+UX Rules (Critical)
+No homepage banners
+No pop-ups
+No loud countdown UI
+No UI clutter
+Ad plays before content, then a clean transition into the film
+Theater Mode experience must remain intact
+⚠️ Ads must be wired but disabled by default.
+4) Event Tracking (Lightweight Only)
+Track only the following events:
+Content play
+Content completion
+Ad impression
+Explicitly Do NOT Track
+Earnings
+Creator payouts
+Detailed analytics
+Viewer profiles
+5) Player & UI Rules (Unchanged)
+Theater Mode remains dominant
+Sliders remain the primary navigation
+Audio and video use the same overlay system
+Branding rules remain unchanged
+No UI modifications unless strictly required for internal admin tools.
+6) Explicitly Out of Scope (DO NOT BUILD)
+Subscriptions
+Payments
+Tips or donations
+Mid-roll ads
+Open uploads
+Creator analytics dashboards
+Social features
+Any feature not listed above
+7) Allowed Work During Phase 2 Overlap (Backend + Admin Only)
+The following may be implemented behind feature flags and must not be exposed:
+Backend / Infrastructure
+Creator data model with status:
+pending / approved / rejected
+Creator application submission flow
+Admin creator review and approval logic
+Mux direct upload wiring for creators
+Ad system wiring (pre-roll only, disabled)
+Event tracking schema:
+play events
+completion events
+ad impression events
+Admin (Internal Only)
+Admin UI to:
+approve / reject creators
+enable / disable ads per title
+remove or hide creator content
+8) Activation Rule
+Phase 3 features must remain disabled
+Activation occurs only after Phase 2 acceptance
+Feature flags are mandatory
+9) Acceptance Checkpoints (For Reference)
+Checkpoint 1 — Creators
+Creator application → admin approval flow works
+Approved creators can upload and publish content
+Checkpoint 2 — Ads
+Pre-roll plays when enabled
+No UI clutter
+Clean transition into content
+Checkpoint 3 — Tracking
+Play events logged
+Ad impression events logged
+Final Instruction
+Implement Phase 3 backend and admin groundwork only.
+Do not expose Phase 3 functionality publicly.
+Do not redesign or alter completed phases.
+Provide a timeline estimate based strictly on this scope.

@@ -73,3 +73,158 @@ export function onAuthStateChange(callback: (user: any) => void) {
   })
 }
 
+// Phase 3 Types
+
+export type CreatorStatus = 'pending' | 'approved' | 'rejected'
+
+export type Creator = {
+  id: string
+  user_id: string
+  name: string
+  email: string
+  bio?: string
+  status: CreatorStatus
+  application_notes?: string
+  admin_notes?: string
+  reviewed_by?: string
+  reviewed_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export type TitleAdConfig = {
+  id: string
+  title_id: string
+  ads_enabled: boolean
+  ad_duration_seconds: number
+  ad_url?: string
+  created_at: string
+  updated_at: string
+}
+
+export type PlayEvent = {
+  id: string
+  user_id?: string
+  title_id?: string
+  episode_id?: string
+  session_id?: string
+  created_at: string
+}
+
+export type CompletionEvent = {
+  id: string
+  user_id?: string
+  title_id?: string
+  episode_id?: string
+  session_id?: string
+  watch_percentage: number
+  created_at: string
+}
+
+export type AdImpressionEvent = {
+  id: string
+  user_id?: string
+  title_id?: string
+  episode_id?: string
+  session_id?: string
+  ad_duration_seconds: number
+  completed: boolean
+  created_at: string
+}
+
+export type MuxUpload = {
+  id: string
+  creator_id: string
+  mux_upload_id: string
+  mux_asset_id?: string
+  mux_playback_id?: string
+  status: 'preparing' | 'asset_created' | 'ready' | 'errored'
+  title_metadata?: any
+  created_at: string
+  updated_at: string
+}
+
+export type FeatureFlag = {
+  id: string
+  feature_name: string
+  enabled: boolean
+  description?: string
+  updated_at: string
+}
+
+// Feature Flag helpers
+export async function getFeatureFlag(featureName: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('feature_flags')
+      .select('enabled')
+      .eq('feature_name', featureName)
+      .single()
+    
+    return data?.enabled || false
+  } catch {
+    return false
+  }
+}
+
+export async function getAllFeatureFlags(): Promise<FeatureFlag[]> {
+  const { data } = await supabase
+    .from('feature_flags')
+    .select('*')
+    .order('feature_name')
+  
+  return data || []
+}
+
+// Event tracking helpers
+export async function logPlayEvent(
+  titleId?: string,
+  episodeId?: string,
+  sessionId?: string
+) {
+  const user = await getCurrentUser()
+  
+  return await supabase.from('play_events').insert({
+    user_id: user?.id,
+    title_id: titleId,
+    episode_id: episodeId,
+    session_id: sessionId,
+  })
+}
+
+export async function logCompletionEvent(
+  watchPercentage: number,
+  titleId?: string,
+  episodeId?: string,
+  sessionId?: string
+) {
+  const user = await getCurrentUser()
+  
+  return await supabase.from('completion_events').insert({
+    user_id: user?.id,
+    title_id: titleId,
+    episode_id: episodeId,
+    session_id: sessionId,
+    watch_percentage: watchPercentage,
+  })
+}
+
+export async function logAdImpressionEvent(
+  adDurationSeconds: number,
+  completed: boolean,
+  titleId?: string,
+  episodeId?: string,
+  sessionId?: string
+) {
+  const user = await getCurrentUser()
+  
+  return await supabase.from('ad_impression_events').insert({
+    user_id: user?.id,
+    title_id: titleId,
+    episode_id: episodeId,
+    session_id: sessionId,
+    ad_duration_seconds: adDurationSeconds,
+    completed: completed,
+  })
+}
+

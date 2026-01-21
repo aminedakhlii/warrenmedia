@@ -562,6 +562,41 @@ export default function AdminTitlesPage() {
           </div>
         </div>
 
+        {/* Phase 3 Admin Navigation */}
+        <div className="mt-8 bg-gray-900 rounded-lg p-6">
+          <h3 className="text-xl font-semibold mb-4">Phase 3: Admin Tools</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a
+              href="/admin/creators"
+              className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-center"
+            >
+              <div className="text-2xl mb-2">👥</div>
+              <div className="text-sm font-medium">Creators</div>
+            </a>
+            <a
+              href="/admin/ads"
+              className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-center"
+            >
+              <div className="text-2xl mb-2">📺</div>
+              <div className="text-sm font-medium">Ads</div>
+            </a>
+            <a
+              href="/admin/settings"
+              className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-center"
+            >
+              <div className="text-2xl mb-2">⚙️</div>
+              <div className="text-sm font-medium">Settings</div>
+            </a>
+            <a
+              href="/admin/analytics"
+              className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-center"
+            >
+              <div className="text-2xl mb-2">📊</div>
+              <div className="text-sm font-medium">Analytics</div>
+            </a>
+          </div>
+        </div>
+
         {/* Back to Home */}
         <div className="mt-8">
           <a

@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import MuxPlayer from '@mux/mux-player-react'
-import type { Title, Season, Episode } from '../lib/supabaseClient'
-import { supabase, getCurrentUser } from '../lib/supabaseClient'
+import type { Title, Season, Episode, TitleAdConfig } from '../lib/supabaseClient'
+import { 
+  supabase, 
+  getCurrentUser, 
+  getFeatureFlag,
+  logPlayEvent,
+  logCompletionEvent
+} from '../lib/supabaseClient'
+import PreRollAd from './PreRollAd'
 
 interface TheaterOverlayProps {
   title: Title
@@ -34,10 +41,22 @@ export default function TheaterOverlay({
   const [showEpisodeSelector, setShowEpisodeSelector] = useState(false)
 
   const [user, setUser] = useState<any>(null)
+  
+  // Phase 3: Ads and tracking (behind feature flags)
+  const [sessionId] = useState(() => crypto.randomUUID())
+  const [showingAd, setShowingAd] = useState(false)
+  const [adConfig, setAdConfig] = useState<TitleAdConfig | null>(null)
+  const [adsEnabled, setAdsEnabled] = useState(false)
+  const [trackingEnabled, setTrackingEnabled] = useState(false)
+  const hasLoggedPlayRef = useRef(false)
 
-  // Get current user
+  // Get current user and feature flags
   useEffect(() => {
     getCurrentUser().then(setUser)
+    
+    // Check feature flags
+    getFeatureFlag('ads_system').then(setAdsEnabled)
+    getFeatureFlag('event_tracking').then(setTrackingEnabled)
   }, [])
 
   // Load series data if content is a series
@@ -46,6 +65,52 @@ export default function TheaterOverlay({
       loadSeriesData()
     }
   }, [title])
+
+  // Phase 3: Check for ads and log play event
+  useEffect(() => {
+    async function init() {
+      // Check if ads are enabled for this title
+      if (adsEnabled && title.content_type !== 'series') {
+        const { data } = await supabase
+          .from('title_ad_config')
+          .select('*')
+          .eq('title_id', title.id)
+          .eq('ads_enabled', true)
+          .single()
+        
+        if (data) {
+          setAdConfig(data)
+          setShowingAd(true)
+        }
+      }
+
+      // Log play event (if tracking enabled and not already logged)
+      if (trackingEnabled && !hasLoggedPlayRef.current) {
+        hasLoggedPlayRef.current = true
+        if (title.content_type === 'series' && currentEpisode) {
+          await logPlayEvent(undefined, currentEpisode.id, sessionId)
+        } else {
+          await logPlayEvent(title.id, undefined, sessionId)
+        }
+      }
+    }
+
+    init()
+  }, [adsEnabled, trackingEnabled, title, currentEpisode, sessionId])
+
+  // Log completion event on unmount
+  useEffect(() => {
+    return () => {
+      if (trackingEnabled && duration > 0 && currentTime > 0) {
+        const watchPercentage = (currentTime / duration) * 100
+        if (title.content_type === 'series' && currentEpisode) {
+          logCompletionEvent(watchPercentage, undefined, currentEpisode.id, sessionId)
+        } else {
+          logCompletionEvent(watchPercentage, title.id, undefined, sessionId)
+        }
+      }
+    }
+  }, [trackingEnabled, currentTime, duration, title, currentEpisode, sessionId])
 
   const loadSeriesData = async () => {
     try {
@@ -310,6 +375,20 @@ export default function TheaterOverlay({
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
   const playbackId = getPlaybackId()
   const isPodcast = title.content_type === 'podcast'
+
+  // Phase 3: Show pre-roll ad if enabled
+  if (showingAd && adConfig?.ad_url) {
+    return (
+      <PreRollAd
+        adUrl={adConfig.ad_url}
+        adDurationSeconds={adConfig.ad_duration_seconds}
+        titleId={title.content_type === 'series' ? undefined : title.id}
+        episodeId={currentEpisode?.id}
+        sessionId={sessionId}
+        onComplete={() => setShowingAd(false)}
+      />
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
