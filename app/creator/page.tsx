@@ -122,11 +122,11 @@ export default function CreatorPortalPage() {
           <h1 className="text-4xl font-bold mb-2">Become a Creator</h1>
           <p className="text-gray-400 mb-8">Apply to upload content to Warren Media</p>
 
-          <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 mb-8">
-            <p className="text-amber-400 font-semibold mb-2">📋 Application Process</p>
+          <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4 mb-8">
+            <p className="text-blue-400 font-semibold mb-2">📋 Curated Creator Community</p>
             <p className="text-sm text-gray-300">
-              All creator applications are reviewed by our team. This is a controlled-access
-              platform - there is no open signup.
+              Join our curated community of creators. All applications are reviewed by our team to maintain quality and ensure a premium viewing experience.
+              This is a controlled-access platform with no open signup.
             </p>
           </div>
 

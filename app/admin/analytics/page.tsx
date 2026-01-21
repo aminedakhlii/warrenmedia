@@ -64,12 +64,12 @@ export default function AdminAnalyticsPage() {
         <h1 className="text-4xl font-bold mb-2">Analytics</h1>
         <p className="text-gray-400 mb-8">Phase 3: Event Tracking (Lightweight)</p>
 
-        {/* Warning */}
-        <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 mb-8">
-          <p className="text-amber-400 font-semibold mb-2">ℹ️ Phase 3 Tracking</p>
+        {/* Info */}
+        <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4 mb-8">
+          <p className="text-blue-400 font-semibold mb-2">📊 Lightweight Event Tracking</p>
           <p className="text-sm text-gray-300">
-            Only basic events are tracked: plays, completions, and ad impressions.
-            No earnings, payouts, or detailed user analytics.
+            Basic events tracked: plays, completions, and ad impressions. Enable 'event_tracking' feature flag in Settings to start collecting data.
+            No earnings, payouts, or detailed user analytics (by design).
           </p>
         </div>
 

@@ -129,12 +129,12 @@ export default function AdminAdsPage() {
         <h1 className="text-4xl font-bold mb-2">Ad Management</h1>
         <p className="text-gray-400 mb-8">Phase 3: Pre-roll Ads (Controlled)</p>
 
-        {/* Warning */}
-        <div className="bg-amber-900/30 border border-amber-600 rounded-lg p-4 mb-8">
-          <p className="text-amber-400 font-semibold mb-2">⚠️ Phase 3 Feature</p>
+        {/* Info */}
+        <div className="bg-blue-900/30 border border-blue-600 rounded-lg p-4 mb-8">
+          <p className="text-blue-400 font-semibold mb-2">📺 Pre-Roll Ad System</p>
           <p className="text-sm text-gray-300">
-            Ads are wired but disabled by default. Requires 'ads_system' feature flag to be enabled.
-            Pre-roll ads only - no mid-roll or post-roll.
+            Configure pre-roll ads per title below. Ads will only play if the 'ads_system' feature flag is enabled in Settings.
+            Pre-roll only - no mid-roll or post-roll. Duration: 5-30 seconds.
           </p>
         </div>
 

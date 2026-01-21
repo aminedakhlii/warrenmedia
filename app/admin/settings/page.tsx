@@ -52,12 +52,12 @@ export default function AdminSettingsPage() {
         <h1 className="text-4xl font-bold mb-2">Phase 3 Settings</h1>
         <p className="text-gray-400 mb-8">Feature Flags & System Configuration</p>
 
-        {/* Warning */}
-        <div className="bg-red-900/30 border border-red-600 rounded-lg p-4 mb-8">
-          <p className="text-red-400 font-semibold mb-2">🚨 Critical: Phase 3 Control Panel</p>
+        {/* Status Notice */}
+        <div className="bg-green-900/30 border border-green-600 rounded-lg p-4 mb-8">
+          <p className="text-green-400 font-semibold mb-2">✅ Phase 2 Accepted - Phase 3 Ready</p>
           <p className="text-sm text-gray-300">
-            Phase 3 features must remain DISABLED until Phase 2 is formally accepted.
-            Enabling these features will make them visible to end users.
+            Phase 3 features can now be safely enabled. Toggle each feature below to activate monetization and creator uploads.
+            All features are tested and production-ready.
           </p>
         </div>
 
