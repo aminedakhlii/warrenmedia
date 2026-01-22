@@ -86,6 +86,7 @@ export type Creator = {
   status: CreatorStatus
   application_notes?: string
   admin_notes?: string
+  rejection_reason?: string
   reviewed_by?: string
   reviewed_at?: string
   created_at: string
