@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase, getCurrentUser, getFeatureFlag, type Creator, type Title, type Season, type Episode, ContentType } from '../lib/supabaseClient'
+import CreatorPosts from '../components/CreatorPosts'
 
 export default function CreatorPortalPage() {
   const [user, setUser] = useState<any>(null)
@@ -284,6 +285,11 @@ export default function CreatorPortalPage() {
         {activeTab === 'upload' && <UploadTab creator={creator} />}
         {activeTab === 'manage' && <ManageContentTab creator={creator} />}
         {activeTab === 'series' && <ManageSeriesTab creator={creator} />}
+
+        {/* Creator Posts Section */}
+        <div className="mt-8">
+          <CreatorPosts creatorId={creator.id} />
+        </div>
       </div>
     </div>
   )

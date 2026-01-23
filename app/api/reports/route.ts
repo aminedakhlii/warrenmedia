@@ -54,8 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Reason too long (max 500 characters)' }, { status: 400 })
     }
 
-    // Check if already reported by this user
-    const { data: existing } = await supabase
+    // Check if already reported by this user using authenticated client
+    const { data: existing } = await supabaseAuth
       .from('reported_content')
       .select('id')
       .eq('content_type', contentType)
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You have already reported this content' }, { status: 400 })
     }
 
-    // Create report
-    const { data: report, error } = await supabase
+    // Create report using authenticated client
+    const { data: report, error } = await supabaseAuth
       .from('reported_content')
       .insert({
         content_type: contentType,
@@ -83,8 +83,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    // Log rate limit event
-    await logRateLimit(user.id, 'report')
+    // Log rate limit event using authenticated client
+    await supabaseAuth.from('rate_limit_events').insert({
+      user_id: user.id,
+      action_type: 'report',
+    })
 
     return NextResponse.json({ report }, { status: 201 })
   } catch (error) {

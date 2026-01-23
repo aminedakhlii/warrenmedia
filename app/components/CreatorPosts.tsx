@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getCurrentUser, getFeatureFlag, type CreatorPost, type Creator } from '../lib/supabaseClient'
+import { supabase, getCurrentUser, getFeatureFlag, type CreatorPost, type Creator } from '../lib/supabaseClient'
 
 interface CreatorPostsProps {
   creatorId?: string
@@ -39,10 +39,17 @@ export default function CreatorPosts({ creatorId, titleId }: CreatorPostsProps) 
       const currentUser = await getCurrentUser()
       setUser(currentUser)
 
-      // Check if user is a creator
-      if (currentUser) {
-        const { data } = await fetch(`/api/creator-posts?creatorId=${creatorId || ''}&titleId=${titleId || ''}`).then(r => r.json())
-        setPosts(data.posts || [])
+      // Check if current user is the creator (to show post button)
+      if (currentUser && creatorId) {
+        const { data: creatorData } = await supabase
+          .from('creators')
+          .select('*')
+          .eq('id', creatorId)
+          .eq('user_id', currentUser.id)
+          .eq('status', 'approved')
+          .single()
+        
+        setCreator(creatorData)
       }
 
       await fetchPosts()

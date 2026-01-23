@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid reaction type' }, { status: 400 })
     }
 
-    // Check if reaction already exists
-    const { data: existing } = await supabase
+    // Check if reaction already exists using authenticated client
+    const { data: existing } = await supabaseAuth
       .from('comment_reactions')
       .select('id, reaction_type')
       .eq('comment_id', commentId)
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       // If same reaction, remove it (toggle off)
       if (existing.reaction_type === reactionType) {
-        const { error } = await supabase
+        const { error } = await supabaseAuth
           .from('comment_reactions')
           .delete()
           .eq('id', existing.id)
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ action: 'removed', reactionType })
       } else {
         // Different reaction, update it
-        const { error } = await supabase
+        const { error } = await supabaseAuth
           .from('comment_reactions')
           .update({ reaction_type: reactionType })
           .eq('id', existing.id)
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ action: 'updated', reactionType })
       }
     } else {
-      // Create new reaction
-      const { error } = await supabase
+      // Create new reaction using authenticated client
+      const { error } = await supabaseAuth
         .from('comment_reactions')
         .insert({
           comment_id: commentId,
@@ -98,8 +98,11 @@ export async function POST(request: NextRequest) {
 
       if (error) throw error
 
-      // Log rate limit event
-      await logRateLimit(user.id, 'reaction')
+      // Log rate limit event using authenticated client
+      await supabaseAuth.from('rate_limit_events').insert({
+        user_id: user.id,
+        action_type: 'reaction',
+      })
 
       return NextResponse.json({ action: 'added', reactionType }, { status: 201 })
     }

@@ -138,9 +138,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Comment too long (max 1000 characters)' }, { status: 400 })
     }
 
-    // Check for duplicate content (anti-spam)
+    // Check for duplicate content (anti-spam) using authenticated client
     const recentWindow = new Date(Date.now() - 60 * 1000).toISOString() // Last minute
-    const { data: recentComments } = await supabase
+    const { data: recentComments } = await supabaseAuth
       .from('comments')
       .select('content')
       .eq('user_id', user.id)
@@ -150,8 +150,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Duplicate comment detected' }, { status: 400 })
     }
 
-    // Create comment
-    const { data: comment, error } = await supabase
+    // Create comment using authenticated client (for RLS)
+    const { data: comment, error } = await supabaseAuth
       .from('comments')
       .insert({
         user_id: user.id,
@@ -165,8 +165,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    // Log rate limit event
-    await logRateLimit(user.id, 'comment')
+    // Log rate limit event using authenticated client
+    await supabaseAuth.from('rate_limit_events').insert({
+      user_id: user.id,
+      action_type: 'comment',
+    })
 
     return NextResponse.json({ comment }, { status: 201 })
   } catch (error) {
@@ -211,8 +214,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Comment ID required' }, { status: 400 })
     }
 
-    // Verify ownership
-    const { data: comment } = await supabase
+    // Verify ownership using authenticated client
+    const { data: comment } = await supabaseAuth
       .from('comments')
       .select('user_id')
       .eq('id', commentId)
@@ -226,8 +229,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized to delete this comment' }, { status: 403 })
     }
 
-    // Soft delete
-    const { error } = await supabase
+    // Soft delete using authenticated client
+    const { error } = await supabaseAuth
       .from('comments')
       .update({ is_deleted: true })
       .eq('id', commentId)
