@@ -11,6 +11,7 @@ import {
   logCompletionEvent
 } from '../lib/supabaseClient'
 import PreRollAd from './PreRollAd'
+import CommentsSection from './CommentsSection'
 
 interface TheaterOverlayProps {
   title: Title
@@ -39,6 +40,7 @@ export default function TheaterOverlay({
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(initialEpisode || null)
   const [selectedSeason, setSelectedSeason] = useState<Season | null>(null)
   const [showEpisodeSelector, setShowEpisodeSelector] = useState(false)
+  const [showComments, setShowComments] = useState(false)
 
   const [user, setUser] = useState<any>(null)
   
@@ -570,6 +572,18 @@ export default function TheaterOverlay({
               </button>
             )}
 
+            {/* Comments toggle button */}
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className={`px-4 py-2 rounded-lg transition text-sm ${
+                showComments
+                  ? 'bg-amber-glow/20 text-amber-400'
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+            >
+              💬 Comments
+            </button>
+
             {/* Spacer */}
             <div className="flex-1" />
 
@@ -606,6 +620,17 @@ export default function TheaterOverlay({
             )}
           </div>
         </div>
+
+        {/* Comments Panel (non-intrusive, below video) */}
+        {showComments && (
+          <div className="absolute bottom-0 left-0 right-0 max-h-[50vh] overflow-y-auto z-40 bg-black/95 backdrop-blur-sm">
+            <CommentsSection
+              titleId={title.id}
+              episodeId={currentEpisode?.id}
+              isVisible={showComments}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

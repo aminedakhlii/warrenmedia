@@ -229,3 +229,129 @@ export async function logAdImpressionEvent(
   })
 }
 
+// Phase 4 Types - Community (Cinema-First, Non-Noisy)
+
+export type ReactionType = 'like' | 'love' | 'laugh'
+
+export type Comment = {
+  id: string
+  user_id: string
+  title_id: string
+  episode_id?: string
+  parent_comment_id?: string
+  content: string
+  is_hidden: boolean
+  is_deleted: boolean
+  hidden_by?: string
+  hidden_at?: string
+  hidden_reason?: string
+  created_at: string
+  updated_at: string
+}
+
+export type CommentWithDetails = Comment & {
+  like_count: number
+  love_count: number
+  laugh_count: number
+  total_reactions: number
+  user_email?: string
+}
+
+export type CommentReaction = {
+  id: string
+  comment_id: string
+  user_id: string
+  reaction_type: ReactionType
+  created_at: string
+}
+
+export type CreatorPost = {
+  id: string
+  creator_id: string
+  title_id?: string
+  content: string
+  image_url?: string
+  is_hidden: boolean
+  hidden_by?: string
+  hidden_at?: string
+  hidden_reason?: string
+  created_at: string
+  updated_at: string
+}
+
+export type ReportedContent = {
+  id: string
+  content_type: 'comment' | 'creator_post' | 'user'
+  content_id: string
+  reported_by: string
+  reason: string
+  status: 'pending' | 'reviewed' | 'actioned' | 'dismissed'
+  reviewed_by?: string
+  reviewed_at?: string
+  admin_notes?: string
+  created_at: string
+}
+
+export type UserBan = {
+  id: string
+  user_id: string
+  banned_by: string
+  reason: string
+  ban_type: 'comment' | 'full'
+  expires_at?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type BlockedUser = {
+  id: string
+  user_id: string
+  blocked_user_id: string
+  created_at: string
+}
+
+// Phase 4 Helper Functions
+
+// Check if user is banned from commenting
+export async function isUserBanned(userId?: string): Promise<boolean> {
+  if (!userId) return false
+  
+  const { data } = await supabase
+    .from('user_bans')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .or('expires_at.is.null,expires_at.gt.now()')
+    .limit(1)
+  
+  return (data && data.length > 0) || false
+}
+
+// Check rate limit for user action
+export async function checkRateLimit(
+  userId: string,
+  actionType: string,
+  limit: number,
+  windowMinutes: number
+): Promise<boolean> {
+  const windowStart = new Date(Date.now() - windowMinutes * 60 * 1000).toISOString()
+  
+  const { count } = await supabase
+    .from('rate_limit_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('action_type', actionType)
+    .gte('created_at', windowStart)
+  
+  return (count || 0) < limit
+}
+
+// Log rate limit event
+export async function logRateLimit(userId: string, actionType: string) {
+  return await supabase.from('rate_limit_events').insert({
+    user_id: userId,
+    action_type: actionType,
+  })
+}
+
