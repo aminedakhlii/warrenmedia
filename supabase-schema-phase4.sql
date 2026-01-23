@@ -252,9 +252,9 @@ CREATE TRIGGER update_user_bans_updated_at
 -- =============================================
 
 -- Add feature flag for creator posts
-INSERT INTO feature_flags (flag_name, enabled, description)
+INSERT INTO feature_flags (feature_name, enabled, description)
 VALUES ('enable_creator_posts', false, 'Enable creator posts feature (Phase 4)')
-ON CONFLICT (flag_name) DO NOTHING;
+ON CONFLICT (feature_name) DO NOTHING;
 
 -- =============================================
 -- HELPER VIEWS
