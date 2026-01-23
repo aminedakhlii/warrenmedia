@@ -62,10 +62,29 @@ export async function GET(request: NextRequest) {
       userReactions = data || []
     }
 
+    // Get user profiles for display names
+    const userIds = comments?.map(c => c.user_id) || []
+    let userProfiles: any = {}
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds)
+      
+      if (profiles) {
+        profiles.forEach(p => {
+          userProfiles[p.user_id] = p.display_name
+        })
+      }
+    }
+
     // Aggregate reaction counts
     const commentsWithReactions = comments?.map(comment => {
       const commentReactions = reactionsData.filter(r => r.comment_id === comment.id)
       const userReaction = userReactions.find(r => r.comment_id === comment.id)
+      
+      // Use display name if exists, otherwise fallback to truncated user ID
+      const displayName = userProfiles[comment.user_id] || `User ${comment.user_id.slice(0, 8)}`
       
       return {
         ...comment,
@@ -74,7 +93,7 @@ export async function GET(request: NextRequest) {
         laugh_count: commentReactions.filter(r => r.reaction_type === 'laugh').length,
         total_reactions: commentReactions.length,
         user_reaction: userReaction?.reaction_type || null,
-        user_email: `User ${comment.user_id.slice(0, 8)}`, // Show truncated user ID
+        user_email: displayName,
       }
     })
 

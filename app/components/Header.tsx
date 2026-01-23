@@ -47,6 +47,12 @@ export default function Header() {
                   <>
                     <span className="text-sm text-gray-400">{user.email}</span>
                     <Link
+                      href="/profile"
+                      className="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition"
+                    >
+                      Profile
+                    </Link>
+                    <Link
                       href="/creator"
                       className="px-4 py-2 rounded-lg bg-amber-glow hover:bg-amber-600 transition text-black font-semibold"
                     >

@@ -6,9 +6,10 @@ import { supabase, getCurrentUser, getFeatureFlag, type CreatorPost, type Creato
 interface CreatorPostsProps {
   creatorId?: string
   titleId?: string
+  readonly?: boolean
 }
 
-export default function CreatorPosts({ creatorId, titleId }: CreatorPostsProps) {
+export default function CreatorPosts({ creatorId, titleId, readonly = false }: CreatorPostsProps) {
   const [enabled, setEnabled] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [creator, setCreator] = useState<Creator | null>(null)
@@ -86,9 +87,20 @@ export default function CreatorPosts({ creatorId, titleId }: CreatorPostsProps) 
     }
 
     try {
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      if (!token) {
+        throw new Error('No authentication token found')
+      }
+
       const response = await fetch('/api/creator-posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           content: postForm.content,
           imageUrl: postForm.imageUrl || null,
@@ -122,29 +134,33 @@ export default function CreatorPosts({ creatorId, titleId }: CreatorPostsProps) 
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 bg-black/20 rounded-lg">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-300">Creator Updates</h3>
-        {creator && (
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-amber-glow hover:bg-amber-600 rounded-lg text-sm font-semibold transition text-black"
-          >
-            {showForm ? 'Cancel' : '+ New Post'}
-          </button>
-        )}
-      </div>
+      {!readonly && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-300">Creator Updates</h3>
+            {creator && (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="px-4 py-2 bg-amber-glow hover:bg-amber-600 rounded-lg text-sm font-semibold transition text-black"
+              >
+                {showForm ? 'Cancel' : '+ New Post'}
+              </button>
+            )}
+          </div>
 
-      {message && (
-        <div
-          className={`mb-4 p-3 rounded-lg text-sm ${
-            message.includes('❌') ? 'bg-red-900/50 text-red-300' : 'bg-green-900/50 text-green-300'
-          }`}
-        >
-          {message}
-        </div>
+          {message && (
+            <div
+              className={`mb-4 p-3 rounded-lg text-sm ${
+                message.includes('❌') ? 'bg-red-900/50 text-red-300' : 'bg-green-900/50 text-green-300'
+              }`}
+            >
+              {message}
+            </div>
+          )}
+        </>
       )}
 
-      {showForm && (
+      {!readonly && showForm && (
         <form onSubmit={handleSubmit} className="mb-6 bg-gray-900/60 rounded-lg p-4">
           <textarea
             value={postForm.content}

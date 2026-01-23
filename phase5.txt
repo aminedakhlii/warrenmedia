@@ -1,0 +1,141 @@
+Phase 5: Stability, Scale & App Readiness (Final Phase)
+You are working on the final phase of a cinema-first streaming platform that already has:
+Core viewing experience (Phase 1)
+Accounts + content depth (Phase 2)
+Monetization + creators (Phase 3)
+Community (Phase 4)
+⚠️ Phase 5 is NOT about new user-facing features.
+It is about hardening, performance, reliability, and future readiness.
+Before writing any code, analyze the existing architecture and produce a short plan describing:
+What needs optimization
+What needs protection
+What needs preparation for scale and apps
+Only then proceed with implementation.
+Global Rules (Non-Negotiable)
+No redesigns
+No UI clutter
+No new product features
+No changes to Theater Mode behavior
+No changes to slider/navigation logic
+Ignore domain setup, DNS, and hosting wiring
+Focus on code, data, performance, and reliability
+If a task is infrastructure-only or operational (DNS, billing, legal), do not implement it.
+Phase 5 Goals
+Improve performance and reliability under load
+Harden security and abuse protections
+Prepare the codebase for mobile and TV apps
+Add production-grade monitoring and diagnostics
+1) PERFORMANCE OPTIMIZATION (REQUIRED)
+Homepage & Browsing
+Optimize homepage data loading:
+Add pagination or limits to rows
+Avoid loading unused fields
+Reduce database calls per page
+Cache public, read-heavy rows where appropriate
+Ensure sliders remain smooth under large datasets
+Media & Assets
+Optimize poster and backdrop image loading
+Ensure fast player initialization
+Eliminate unnecessary re-renders during playback
+2) SCALING & INFRASTRUCTURE HARDENING (REQUIRED)
+Rate Limiting
+Implement server-side rate limits for:
+Authentication
+Uploads
+Posting/comments
+Creator actions
+Database
+Audit and add indexes for:
+Titles
+Playback progress
+Comments
+Events
+Optimize slow queries
+Ensure queries scale with large row counts
+Background Work
+Introduce background jobs / queues only if needed for:
+Upload status updates
+Moderation actions
+Cleanup tasks
+Keep this minimal.
+3) MONITORING & RELIABILITY (REQUIRED)
+Add production-ready monitoring:
+Error Tracking
+Integrate error tracking (e.g., Sentry or equivalent)
+Capture:
+Frontend runtime errors
+API/server errors
+Player failures
+Logging
+Log key events:
+Playback start
+Playback errors
+Upload failures
+Ad errors (if ads enabled)
+Logs must be structured and queryable.
+4) SECURITY HARDENING (REQUIRED)
+Access Control
+Verify admin routes are fully protected by role
+Ensure creator/admin separation is enforced
+Supabase Security
+Review and verify all RLS policies
+Ensure no public write access where unintended
+Validate role-based access paths
+Environment & Server Safety
+Secure environment variables
+Lock down server routes
+Prevent abuse of upload and post endpoints
+5) APPS PREPARATION (REQUIRED, NO APP BUILDING)
+TV / Remote Readiness
+Ensure keyboard and remote navigation is consistent across:
+Homepage
+Sliders
+Theater Mode
+Community panels
+Focus state must be:
+Predictable
+Visible
+Preserved across navigation
+Back behavior must be consistent everywhere
+Mobile Preparation
+Verify responsive layouts across breakpoints
+Ensure Theater Mode works cleanly on mobile
+PWA readiness may be prepared, but not shipped
+⚠️ Do not build native apps.
+Only prepare the codebase so apps are feasible later.
+6) ANALYTICS & DIAGNOSTICS (REQUIRED)
+Confirm analytics events fire correctly:
+Plays
+Completions
+Errors
+Ensure analytics does not block playback or UI
+Keep analytics lightweight and non-invasive
+7) OUT OF SCOPE — DO NOT BUILD
+❌ Native mobile apps
+❌ TV apps
+❌ Internationalization
+❌ ML recommendations
+❌ UI redesigns
+❌ New content features
+8) PHASE 5 ACCEPTANCE CHECKPOINTS
+All must pass to mark Phase 5 complete:
+Performance
+Fast homepage load
+Smooth sliders with large datasets
+Reliable, fast player start
+Reliability
+Errors captured and visible
+Logs show playback and failures
+Security
+Admin routes locked
+RLS policies verified
+Abuse protections effective
+App Readiness
+Keyboard/remote navigation polished end-to-end
+Focus and back behavior consistent
+Mobile experience verified
+Final Instruction
+This is the last phase.
+Prioritize stability, clarity, and correctness over speed.
+Think carefully before coding.
+If a change risks breaking completed phases, do not implement it.

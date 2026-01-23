@@ -311,6 +311,15 @@ export type BlockedUser = {
   created_at: string
 }
 
+// User Profile Type
+export type UserProfile = {
+  id: string
+  user_id: string
+  display_name: string
+  created_at: string
+  updated_at: string
+}
+
 // Phase 4 Helper Functions
 
 // Check if user is banned from commenting

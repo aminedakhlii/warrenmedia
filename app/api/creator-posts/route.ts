@@ -54,14 +54,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Creator posts feature is disabled' }, { status: 403 })
     }
 
-    const user = await getCurrentUser()
-    
-    if (!user) {
+    // Get auth token from request header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    // Check if user is a creator
-    const { data: creator } = await supabase
+    // Create authenticated supabase client
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Check if user is a creator using authenticated client
+    const { data: creator } = await supabaseAuth
       .from('creators')
       .select('id')
       .eq('user_id', user.id)
@@ -90,8 +108,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Content too long (max 2000 characters)' }, { status: 400 })
     }
 
-    // Create post
-    const { data: post, error } = await supabase
+    // Create post using authenticated client
+    const { data: post, error } = await supabaseAuth
       .from('creator_posts')
       .insert({
         creator_id: creator.id,
@@ -104,8 +122,11 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error
 
-    // Log rate limit event
-    await logRateLimit(user.id, 'creator_post')
+    // Log rate limit event using authenticated client
+    await supabaseAuth.from('rate_limit_events').insert({
+      user_id: user.id,
+      action_type: 'creator_post',
+    })
 
     return NextResponse.json({ post }, { status: 201 })
   } catch (error) {

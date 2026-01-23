@@ -12,6 +12,7 @@ import {
 } from '../lib/supabaseClient'
 import PreRollAd from './PreRollAd'
 import CommentsSection from './CommentsSection'
+import CreatorPosts from './CreatorPosts'
 
 interface TheaterOverlayProps {
   title: Title
@@ -41,6 +42,7 @@ export default function TheaterOverlay({
   const [selectedSeason, setSelectedSeason] = useState<Season | null>(null)
   const [showEpisodeSelector, setShowEpisodeSelector] = useState(false)
   const [showComments, setShowComments] = useState(false)
+  const [showCreatorPosts, setShowCreatorPosts] = useState(false)
 
   const [user, setUser] = useState<any>(null)
   
@@ -574,7 +576,10 @@ export default function TheaterOverlay({
 
             {/* Comments toggle button */}
             <button
-              onClick={() => setShowComments(!showComments)}
+              onClick={() => {
+                setShowComments(!showComments)
+                if (!showComments) setShowCreatorPosts(false)
+              }}
               className={`px-4 py-2 rounded-lg transition text-sm ${
                 showComments
                   ? 'bg-amber-glow/20 text-amber-400'
@@ -582,6 +587,21 @@ export default function TheaterOverlay({
               }`}
             >
               💬 Comments
+            </button>
+
+            {/* Creator Posts toggle button */}
+            <button
+              onClick={() => {
+                setShowCreatorPosts(!showCreatorPosts)
+                if (!showCreatorPosts) setShowComments(false)
+              }}
+              className={`px-4 py-2 rounded-lg transition text-sm ${
+                showCreatorPosts
+                  ? 'bg-amber-glow/20 text-amber-400'
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+            >
+              📢 Creator Updates
             </button>
 
             {/* Spacer */}
@@ -630,6 +650,22 @@ export default function TheaterOverlay({
               isVisible={showComments}
               onClose={() => setShowComments(false)}
             />
+          </div>
+        )}
+
+        {/* Creator Posts Panel (non-intrusive, below video) */}
+        {showCreatorPosts && (
+          <div className="absolute bottom-0 left-0 right-0 max-h-[50vh] overflow-y-auto z-40 bg-black/95 backdrop-blur-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Creator Updates</h2>
+              <button
+                onClick={() => setShowCreatorPosts(false)}
+                className="text-2xl hover:text-amber-glow transition"
+              >
+                ✕
+              </button>
+            </div>
+            <CreatorPosts titleId={title.id} readonly={true} />
           </div>
         )}
       </div>
