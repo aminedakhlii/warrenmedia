@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getCurrentUser, type Comment, type CommentWithDetails, type ReactionType } from '../lib/supabaseClient'
+import { supabase, getCurrentUser, type Comment, type CommentWithDetails, type ReactionType } from '../lib/supabaseClient'
 
 interface CommentsSectionProps {
   titleId: string
@@ -32,6 +32,17 @@ export default function CommentsSection({ titleId, episodeId, isVisible, onClose
       await fetchComments()
     } catch (error) {
       console.error('Error initializing comments:', error)
+    }
+  }
+
+  // Helper to get auth headers
+  async function getAuthHeaders() {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
     }
   }
 
@@ -74,9 +85,11 @@ export default function CommentsSection({ titleId, episodeId, isVisible, onClose
     setMessage('')
 
     try {
+      const headers = await getAuthHeaders()
+
       const response = await fetch('/api/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           titleId,
           episodeId: episodeId || null,
@@ -108,9 +121,11 @@ export default function CommentsSection({ titleId, episodeId, isVisible, onClose
     }
 
     try {
+      const headers = await getAuthHeaders()
+      
       const response = await fetch('/api/comments/react', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ commentId, reactionType }),
       })
 
@@ -129,8 +144,11 @@ export default function CommentsSection({ titleId, episodeId, isVisible, onClose
     if (!confirm('Delete this comment?')) return
 
     try {
+      const headers = await getAuthHeaders()
+      
       const response = await fetch(`/api/comments?id=${commentId}`, {
         method: 'DELETE',
+        headers,
       })
 
       if (!response.ok) {
@@ -148,9 +166,11 @@ export default function CommentsSection({ titleId, episodeId, isVisible, onClose
     if (!reason) return
 
     try {
+      const headers = await getAuthHeaders()
+      
       const response = await fetch('/api/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           contentType: 'comment',
           contentId: commentId,

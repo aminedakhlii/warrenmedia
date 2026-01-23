@@ -7,9 +7,27 @@ const RATE_LIMIT_WINDOW_MINUTES = 1
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    // Get auth token from request header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Create authenticated supabase client
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 

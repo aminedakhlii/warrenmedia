@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('comments')
-      .select(`
-        *,
-        user_email:user_id(email)
-      `)
+      .select('*')
       .eq('title_id', titleId)
       .eq('is_deleted', false)
       .eq('is_hidden', false)
@@ -77,7 +74,7 @@ export async function GET(request: NextRequest) {
         laugh_count: commentReactions.filter(r => r.reaction_type === 'laugh').length,
         total_reactions: commentReactions.length,
         user_reaction: userReaction?.reaction_type || null,
-        user_email: (comment as any).user_email?.email || 'Anonymous',
+        user_email: `User ${comment.user_id.slice(0, 8)}`, // Show truncated user ID
       }
     })
 
@@ -93,9 +90,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    // Get auth token from request header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Create authenticated supabase client
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
@@ -165,9 +180,27 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
+    // Get auth token from request header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Create authenticated supabase client
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    })
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
     
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
