@@ -7,9 +7,10 @@ interface CommentsSectionProps {
   titleId: string
   episodeId?: string
   isVisible: boolean // Controlled visibility - respects cinema-first
+  onClose: () => void // Callback to close the panel
 }
 
-export default function CommentsSection({ titleId, episodeId, isVisible }: CommentsSectionProps) {
+export default function CommentsSection({ titleId, episodeId, isVisible, onClose }: CommentsSectionProps) {
   const [user, setUser] = useState<any>(null)
   const [comments, setComments] = useState<CommentWithDetails[]>([])
   const [newComment, setNewComment] = useState('')
@@ -176,9 +177,20 @@ export default function CommentsSection({ titleId, episodeId, isVisible }: Comme
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 bg-black/30">
-      <h3 className="text-lg font-semibold mb-4 text-gray-300">
-        Comments {comments.length > 0 && `(${comments.length})`}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-300">
+          Comments {comments.length > 0 && `(${comments.length})`}
+        </h3>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+          aria-label="Close comments"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
 
       {/* Post Comment Form */}
       {user ? (
@@ -186,6 +198,7 @@ export default function CommentsSection({ titleId, episodeId, isVisible }: Comme
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()} // Prevent theater keyboard shortcuts
             placeholder="Share your thoughts..."
             className="w-full px-4 py-3 bg-gray-900/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow resize-none"
             rows={3}

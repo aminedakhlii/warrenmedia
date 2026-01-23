@@ -628,6 +628,7 @@ export default function TheaterOverlay({
               titleId={title.id}
               episodeId={currentEpisode?.id}
               isVisible={showComments}
+              onClose={() => setShowComments(false)}
             />
           </div>
         )}
