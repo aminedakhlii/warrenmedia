@@ -456,7 +456,7 @@ function AdminTitlesContent() {
                       onChange={(e) => setFormData({ ...formData, mux_playback_id: e.target.value })}
                       className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
                       placeholder="abc123xyz..."
-                      required={contentType !== 'series'}
+                      required
                     />
                   ) : (
                     <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
