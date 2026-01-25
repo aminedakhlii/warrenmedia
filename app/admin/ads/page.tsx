@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, type Title, type TitleAdConfig } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function AdminAdsPage() {
+function AdminAdsContent() {
   const [titles, setTitles] = useState<Title[]>([])
   const [adConfigs, setAdConfigs] = useState<Map<string, TitleAdConfig>>(new Map())
   const [loading, setLoading] = useState(false)
@@ -269,3 +270,11 @@ export default function AdminAdsPage() {
   )
 }
 
+
+export default function AdminAdsPage() {
+  return (
+    <AdminGuard>
+      <AdminAdsContent />
+    </AdminGuard>
+  )
+}

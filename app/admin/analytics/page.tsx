@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function AdminAnalyticsPage() {
+function AdminAnalyticsContent() {
   const [stats, setStats] = useState({
     playEvents: 0,
     completionEvents: 0,
@@ -157,3 +158,11 @@ export default function AdminAnalyticsPage() {
   )
 }
 
+
+export default function AdminAnalyticsPage() {
+  return (
+    <AdminGuard>
+      <AdminAnalyticsContent />
+    </AdminGuard>
+  )
+}

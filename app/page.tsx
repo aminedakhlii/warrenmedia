@@ -31,50 +31,93 @@ export default function HomePage() {
 
   async function fetchData() {
     try {
-      // Fetch all titles
-      const { data: allTitles } = await supabase
+      // Phase 5: Optimized queries with limits and only necessary fields
+      const ITEMS_PER_ROW = 20 // Limit items per category for performance
+      
+      // Fetch trending titles (for hero and trending row)
+      const { data: trendingTitles } = await supabase
         .from('titles')
-        .select('*')
+        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id')
+        .eq('category', 'trending')
         .order('created_at', { ascending: false })
+        .limit(ITEMS_PER_ROW)
 
-      if (allTitles && allTitles.length > 0) {
-        // Set hero to first trending title
-        const trendingTitles = allTitles.filter((t) => t.category === 'trending')
-        if (trendingTitles.length > 0) {
-          setHeroTitle(trendingTitles[0])
-        }
-
-        // Set category rows
+      if (trendingTitles && trendingTitles.length > 0) {
+        setHeroTitle(trendingTitles[0])
         setTrending(trendingTitles)
-        setOriginals(allTitles.filter((t) => t.category === 'originals'))
-        setNewReleases(allTitles.filter((t) => t.category === 'new_releases'))
-        setMusicVideos(allTitles.filter((t) => t.category === 'music_videos'))
+      }
+
+      // Fetch originals
+      const { data: originalsTitles } = await supabase
+        .from('titles')
+        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id')
+        .eq('category', 'originals')
+        .order('created_at', { ascending: false })
+        .limit(ITEMS_PER_ROW)
+
+      if (originalsTitles) {
+        setOriginals(originalsTitles)
+      }
+
+      // Fetch new releases
+      const { data: newReleasesTitles } = await supabase
+        .from('titles')
+        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id')
+        .eq('category', 'new_releases')
+        .order('created_at', { ascending: false })
+        .limit(ITEMS_PER_ROW)
+
+      if (newReleasesTitles) {
+        setNewReleases(newReleasesTitles)
+      }
+
+      // Fetch music videos
+      const { data: musicVideosTitles } = await supabase
+        .from('titles')
+        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id')
+        .eq('category', 'music_videos')
+        .order('created_at', { ascending: false })
+        .limit(ITEMS_PER_ROW)
+
+      if (musicVideosTitles) {
+        setMusicVideos(musicVideosTitles)
       }
 
       // Fetch continue watching (only for logged-in users)
       if (user) {
+        // Phase 5: Limit continue watching to 20 most recent items
+        const CONTINUE_WATCHING_LIMIT = 20
+
         // Fetch progress for regular titles (films, music videos, podcasts)
         const { data: titleProgress } = await supabase
           .from('playback_progress')
           .select(`
-            *,
-            title:titles(*)
+            position_seconds,
+            duration_seconds,
+            updated_at,
+            title:titles(id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id)
           `)
           .eq('user_id', user.id)
           .not('title_id', 'is', null)
           .gt('position_seconds', 2)
           .order('updated_at', { ascending: false })
+          .limit(CONTINUE_WATCHING_LIMIT)
 
         // Fetch progress for series episodes (need to get the series title)
         const { data: episodeProgress } = await supabase
           .from('playback_progress')
           .select(`
-            *,
+            position_seconds,
+            duration_seconds,
+            updated_at,
             episode:episodes(
-              *,
+              id,
+              title,
+              episode_number,
               season:seasons(
-                *,
-                series:titles(*)
+                id,
+                season_number,
+                series:titles(id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id)
               )
             )
           `)
@@ -82,6 +125,7 @@ export default function HomePage() {
           .not('episode_id', 'is', null)
           .gt('position_seconds', 2)
           .order('updated_at', { ascending: false })
+          .limit(CONTINUE_WATCHING_LIMIT)
 
         // Combine and deduplicate titles
         const titlesMap = new Map<string, Title>()

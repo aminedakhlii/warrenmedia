@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, type FeatureFlag, getAllFeatureFlags } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function AdminSettingsPage() {
+function AdminSettingsContent() {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -162,3 +163,11 @@ export default function AdminSettingsPage() {
   )
 }
 
+
+export default function AdminSettingsPage() {
+  return (
+    <AdminGuard>
+      <AdminSettingsContent />
+    </AdminGuard>
+  )
+}

@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, type Creator } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function AdminCreatorsPage() {
+function AdminCreatorsContent() {
   const [creators, setCreators] = useState<Creator[]>([])
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [loading, setLoading] = useState(false)
@@ -265,6 +266,14 @@ export default function AdminCreatorsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminCreatorsPage() {
+  return (
+    <AdminGuard>
+      <AdminCreatorsContent />
+    </AdminGuard>
   )
 }
 

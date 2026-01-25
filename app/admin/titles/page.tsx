@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase, type Title, type Season, type Episode, ContentType } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function AdminTitlesPage() {
+function AdminTitlesContent() {
   const [titles, setTitles] = useState<Title[]>([])
   const [contentType, setContentType] = useState<ContentType>('film')
   const [uploadMode, setUploadMode] = useState<'upload' | 'playback_id'>('upload')
@@ -834,5 +835,13 @@ export default function AdminTitlesPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminTitlesPage() {
+  return (
+    <AdminGuard>
+      <AdminTitlesContent />
+    </AdminGuard>
   )
 }

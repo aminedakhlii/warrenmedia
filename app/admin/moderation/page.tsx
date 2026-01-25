@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase, getCurrentUser, type ReportedContent, type UserBan } from '../../lib/supabaseClient'
+import AdminGuard from '../../components/AdminGuard'
 
-export default function ModerationPage() {
+function ModerationContent() {
   const [activeTab, setActiveTab] = useState<'reports' | 'bans'>('reports')
 
   return (
@@ -533,3 +534,11 @@ function BansTab() {
   )
 }
 
+
+export default function ModerationPage() {
+  return (
+    <AdminGuard>
+      <ModerationContent />
+    </AdminGuard>
+  )
+}
