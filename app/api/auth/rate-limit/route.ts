@@ -18,7 +18,7 @@ const LOCKOUT_DURATION_MINUTES = 30 // Lockout for 30 minutes after exceeding
  * @param identifier - IP address or email
  * @returns true if within limit, false if exceeded
  */
-export async function checkAuthRateLimit(identifier: string): Promise<boolean> {
+async function checkAuthRateLimit(identifier: string): Promise<boolean> {
   try {
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000)
 
@@ -46,7 +46,7 @@ export async function checkAuthRateLimit(identifier: string): Promise<boolean> {
  * Log an auth attempt
  * @param identifier - IP address or email
  */
-export async function logAuthAttempt(identifier: string): Promise<void> {
+async function logAuthAttempt(identifier: string): Promise<void> {
   try {
     await supabase.from('rate_limit_events').insert({
       user_id: identifier, // Temporarily using user_id for identifier
@@ -62,7 +62,7 @@ export async function logAuthAttempt(identifier: string): Promise<void> {
  * @param request - NextRequest
  * @returns IP address or 'unknown'
  */
-export function getClientIP(request: NextRequest): string {
+function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   const real = request.headers.get('x-real-ip')
   
