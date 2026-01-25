@@ -63,12 +63,18 @@ CREATE INDEX IF NOT EXISTS idx_seasons_series_number ON seasons(series_id, seaso
 CREATE INDEX IF NOT EXISTS idx_titles_creator ON titles(creator_id);
 CREATE INDEX IF NOT EXISTS idx_mux_uploads_creator ON mux_uploads(creator_id);
 
--- Event logs indexes for analytics
-CREATE INDEX IF NOT EXISTS idx_event_logs_user ON event_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_event_logs_date ON event_logs(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_event_logs_user_date ON event_logs(user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_event_logs_type ON event_logs(event_type);
-CREATE INDEX IF NOT EXISTS idx_event_logs_title ON event_logs(title_id);
+-- Event tables indexes for analytics (Phase 3 uses separate event tables)
+CREATE INDEX IF NOT EXISTS idx_play_events_user ON play_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_play_events_title ON play_events(title_id);
+CREATE INDEX IF NOT EXISTS idx_play_events_created ON play_events(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_completion_events_user ON completion_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_completion_events_title ON completion_events(title_id);
+CREATE INDEX IF NOT EXISTS idx_completion_events_created ON completion_events(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_ad_impression_events_user ON ad_impression_events(user_id);
+CREATE INDEX IF NOT EXISTS idx_ad_impression_events_title ON ad_impression_events(title_id);
+CREATE INDEX IF NOT EXISTS idx_ad_impression_events_created ON ad_impression_events(created_at DESC);
 
 -- Rate limit events indexes
 CREATE INDEX IF NOT EXISTS idx_rate_limit_user_action ON rate_limit_events(user_id, action_type);
@@ -118,7 +124,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION cleanup_old_event_logs()
 RETURNS void AS $$
 BEGIN
-  DELETE FROM event_logs 
+  -- Clean play events
+  DELETE FROM play_events 
+  WHERE created_at < NOW() - INTERVAL '90 days';
+  
+  -- Clean completion events
+  DELETE FROM completion_events 
+  WHERE created_at < NOW() - INTERVAL '90 days';
+  
+  -- Clean ad impression events
+  DELETE FROM ad_impression_events 
   WHERE created_at < NOW() - INTERVAL '90 days';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
