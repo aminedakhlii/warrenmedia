@@ -27,12 +27,12 @@ export default function TheaterOverlay({
   initialPosition = 0,
   initialEpisode,
 }: TheaterOverlayProps) {
-  const playerRef = useRef<HTMLVideoElement>(null)
+  const playerRef = useRef<any>(null)
   const [showControls, setShowControls] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
-  const hideControlsTimeoutRef = useRef<NodeJS.Timeout>()
+  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const lastSaveTimeRef = useRef(0)
 
   // Series-specific state

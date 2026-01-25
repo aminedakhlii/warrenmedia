@@ -131,6 +131,14 @@ export const logger = new Logger()
 
 // Export convenience function for quick logging
 export function log(message: string, level: LogLevel = 'info', context?: Record<string, any>): void {
-  logger[level](message, context)
+  if (level === 'error') {
+    logger.error(message, undefined, context)
+  } else if (level === 'info') {
+    logger.info(message, context)
+  } else if (level === 'warn') {
+    logger.warn(message, context)
+  } else if (level === 'debug') {
+    logger.debug(message, context)
+  }
 }
 

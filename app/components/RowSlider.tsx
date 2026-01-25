@@ -28,7 +28,7 @@ export default function RowSlider({
   const [velocity, setVelocity] = useState(0)
   const [lastX, setLastX] = useState(0)
   const [lastTime, setLastTime] = useState(0)
-  const animationRef = useRef<number>()
+  const animationRef = useRef<number | undefined>(undefined)
 
   // Inertial scrolling with smooth deceleration
   useEffect(() => {
