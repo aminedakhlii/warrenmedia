@@ -37,50 +37,50 @@ export default function HomePage() {
       // Fetch trending titles (for hero and trending row)
       const { data: trendingTitles } = await supabase
         .from('titles')
-        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at')
+        .select('*')
         .eq('category', 'trending')
         .order('created_at', { ascending: false })
         .limit(ITEMS_PER_ROW)
 
       if (trendingTitles && trendingTitles.length > 0) {
-        setHeroTitle(trendingTitles[0] as Title)
-        setTrending(trendingTitles as Title[])
+        setHeroTitle(trendingTitles[0])
+        setTrending(trendingTitles)
       }
 
       // Fetch originals
       const { data: originalsTitles } = await supabase
         .from('titles')
-        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at')
+        .select('*')
         .eq('category', 'originals')
         .order('created_at', { ascending: false })
         .limit(ITEMS_PER_ROW)
 
       if (originalsTitles) {
-        setOriginals(originalsTitles as Title[])
+        setOriginals(originalsTitles)
       }
 
       // Fetch new releases
       const { data: newReleasesTitles } = await supabase
         .from('titles')
-        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at')
+        .select('*')
         .eq('category', 'new_releases')
         .order('created_at', { ascending: false })
         .limit(ITEMS_PER_ROW)
 
       if (newReleasesTitles) {
-        setNewReleases(newReleasesTitles as Title[])
+        setNewReleases(newReleasesTitles)
       }
 
       // Fetch music videos
       const { data: musicVideosTitles } = await supabase
         .from('titles')
-        .select('id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at')
+        .select('*')
         .eq('category', 'music_videos')
         .order('created_at', { ascending: false })
         .limit(ITEMS_PER_ROW)
 
       if (musicVideosTitles) {
-        setMusicVideos(musicVideosTitles as Title[])
+        setMusicVideos(musicVideosTitles)
       }
 
       // Fetch continue watching (only for logged-in users)
@@ -92,10 +92,8 @@ export default function HomePage() {
         const { data: titleProgress } = await supabase
           .from('playback_progress')
           .select(`
-            position_seconds,
-            duration_seconds,
-            updated_at,
-            title:titles(id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at)
+            *,
+            title:titles(*)
           `)
           .eq('user_id', user.id)
           .not('title_id', 'is', null)
@@ -107,17 +105,12 @@ export default function HomePage() {
         const { data: episodeProgress } = await supabase
           .from('playback_progress')
           .select(`
-            position_seconds,
-            duration_seconds,
-            updated_at,
+            *,
             episode:episodes(
-              id,
-              title,
-              episode_number,
+              *,
               season:seasons(
-                id,
-                season_number,
-                series:titles(id, title, poster_url, backdrop_url, description, category, content_type, mux_playback_id, creator_id, runtime_seconds, created_at)
+                *,
+                series:titles(*)
               )
             )
           `)
