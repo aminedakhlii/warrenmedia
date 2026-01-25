@@ -389,7 +389,17 @@ export default function TheaterOverlay({
         titleId={title.content_type === 'series' ? undefined : title.id}
         episodeId={currentEpisode?.id}
         sessionId={sessionId}
-        onComplete={() => setShowingAd(false)}
+        onComplete={() => {
+          setShowingAd(false)
+          // Trigger play after ad completes
+          setTimeout(() => {
+            if (playerRef.current && playerRef.current.play) {
+              playerRef.current.play().catch(() => {
+                // Autoplay might be blocked, user will need to click play
+              })
+            }
+          }, 100)
+        }}
       />
     )
   }
@@ -528,13 +538,13 @@ export default function TheaterOverlay({
         {/* Custom controls */}
         <div
           className={`
-            absolute bottom-0 left-0 right-0 p-8 pt-32 z-10
+            absolute bottom-0 left-0 right-0 p-4 sm:p-8 pt-20 sm:pt-32 z-10
             bg-gradient-to-t from-black/80 to-transparent
             transition-opacity duration-300
             ${showControls ? 'opacity-100' : 'opacity-0'}
           `}
         >
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4 flex-wrap">
             {/* Play/Pause */}
             <button
               onClick={() => {
@@ -560,7 +570,7 @@ export default function TheaterOverlay({
             </button>
 
             {/* Time display */}
-            <div className="text-sm">
+            <div className="text-xs sm:text-sm">
               {formatTime(currentTime)} / {formatTime(duration)}
             </div>
 
@@ -568,9 +578,10 @@ export default function TheaterOverlay({
             {title.content_type === 'series' && (
               <button
                 onClick={() => setShowEpisodeSelector(true)}
-                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-sm"
+                className="px-2 sm:px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition text-xs sm:text-sm"
               >
-                Episodes
+                <span className="hidden sm:inline">Episodes</span>
+                <span className="sm:hidden">Eps</span>
               </button>
             )}
 
@@ -580,13 +591,14 @@ export default function TheaterOverlay({
                 setShowComments(!showComments)
                 if (!showComments) setShowCreatorPosts(false)
               }}
-              className={`px-4 py-2 rounded-lg transition text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${
                 showComments
                   ? 'bg-amber-glow/20 text-amber-400'
                   : 'bg-white/10 hover:bg-white/20'
               }`}
             >
-              💬 Comments
+              <span className="hidden sm:inline">💬 Comments</span>
+              <span className="sm:hidden">💬</span>
             </button>
 
             {/* Creator Posts toggle button */}
@@ -595,13 +607,14 @@ export default function TheaterOverlay({
                 setShowCreatorPosts(!showCreatorPosts)
                 if (!showCreatorPosts) setShowComments(false)
               }}
-              className={`px-4 py-2 rounded-lg transition text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${
                 showCreatorPosts
                   ? 'bg-amber-glow/20 text-amber-400'
                   : 'bg-white/10 hover:bg-white/20'
               }`}
             >
-              📢 Creator Updates
+              <span className="hidden sm:inline">📢 Creator Updates</span>
+              <span className="sm:hidden">📢</span>
             </button>
 
             {/* Spacer */}
@@ -609,7 +622,7 @@ export default function TheaterOverlay({
 
             {/* Auth notice for guests */}
             {!user && (
-              <div className="text-sm text-gray-400">
+              <div className="hidden md:block text-sm text-gray-400">
                 Sign in to save progress
               </div>
             )}
@@ -617,7 +630,7 @@ export default function TheaterOverlay({
             {/* Close button */}
             <button
               onClick={onClose}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition"
+              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-red-600/80 hover:bg-red-600 transition ml-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
