@@ -98,11 +98,10 @@ CREATE INDEX IF NOT EXISTS idx_reported_content_type ON reported_content(content
 CREATE OR REPLACE VIEW trending_titles_view AS
 SELECT 
   t.*,
-  COUNT(DISTINCT el.user_id) as play_count_7days
+  COUNT(DISTINCT pe.user_id) as play_count_7days
 FROM titles t
-LEFT JOIN event_logs el ON el.title_id = t.id 
-  AND el.event_type = 'play'
-  AND el.created_at > NOW() - INTERVAL '7 days'
+LEFT JOIN play_events pe ON pe.title_id = t.id 
+  AND pe.created_at > NOW() - INTERVAL '7 days'
 WHERE t.category = 'trending'
 GROUP BY t.id
 ORDER BY play_count_7days DESC, t.created_at DESC;
