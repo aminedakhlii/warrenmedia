@@ -264,13 +264,11 @@ export default function HomePage() {
                 }}
               />
               
-              {/* Gradient overlays */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/60" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black" />
+              {/* Minimal gradient only at bottom for text readability */}
+              <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/90 to-transparent" />
               
               {/* Content overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-12">
+              <div className="absolute bottom-0 left-0 right-0 p-12 z-10">
                 <div className="max-w-3xl">
                   <h1 className="text-6xl font-bold mb-4 tracking-wider">
                     {heroTitle.title}

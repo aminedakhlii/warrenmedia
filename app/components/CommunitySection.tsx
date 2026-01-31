@@ -11,7 +11,7 @@ interface CreatorPost {
   created_at: string
   creator: {
     user_id: string
-    display_name: string
+    name: string
   }
   title?: {
     title: string
@@ -33,7 +33,7 @@ export default function CommunitySection() {
         .from('creator_posts')
         .select(`
           *,
-          creator:creators(user_id, display_name),
+          creator:creators(user_id, name),
           title:titles(title, poster_url)
         `)
         .order('created_at', { ascending: false })
@@ -95,14 +95,14 @@ export default function CommunitySection() {
               <div className="flex items-start gap-3">
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-semibold flex-shrink-0">
-                  {getInitial(post.creator?.display_name)}
+                  {getInitial(post.creator?.name)}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-sm">
-                      {post.creator?.display_name || 'Creator'}
+                      {post.creator?.name || 'Creator'}
                     </span>
                     <span className="text-xs text-gray-500">
                       {formatTime(post.created_at)}

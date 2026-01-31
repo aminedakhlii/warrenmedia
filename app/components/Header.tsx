@@ -62,7 +62,7 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/90 to-transparent backdrop-blur-sm">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-sm border-b border-gray-800/50">
         <div className="flex items-center justify-between px-8 py-4">
           <Link href="/" className="text-2xl font-bold tracking-wider">
             Warren <span className="text-amber-glow">MEDIA</span>
