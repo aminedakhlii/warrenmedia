@@ -252,8 +252,8 @@ export default function HomePage() {
       <main className="min-h-screen bg-black">
         {/* Hero Section - Two Column Layout */}
         {heroTitle && (
-          <div className="relative flex pt-16" style={{ height: '70vh' }}>
-            {/* Left Side - Featured Content */}
+          <div className="relative flex pt-16 pl-7" style={{ height: '55vh' }}>
+            {/* Left Side - Featured Content add watch now button transparent background with border*/}
             <div 
               className="flex-1 relative cursor-pointer transition-transform hover:scale-[1.02]" 
               onClick={() => handleTitleClick(heroTitle)}
@@ -266,10 +266,26 @@ export default function HomePage() {
                   backgroundPosition: 'center',
                 }}
               />
+              
+              {/* Subtle gradient at bottom for button visibility */}
+              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/100 to-transparent" />
+              
+              {/* Watch Now Button */}
+              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-start p-12">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleTitleClick(heroTitle)
+                  }}
+                  className="text-white text-2xl font-bold border-2 border-white px-10 py-2 hover:scale-110 transition-transform z-10"
+                >
+                  WATCH NOW
+                </button>
+              </div>
             </div>
 
             {/* Right Side - Community Section */}
-            <div className="w-[400px] bg-black/40 backdrop-blur-sm border-l border-gray-800 p-8 overflow-hidden">
+            <div className="w-[390px] bg-black/40 backdrop-blur-sm border-l border-gray-800 p-8 overflow-hidden">
               <CommunitySection />
             </div>
           </div>
