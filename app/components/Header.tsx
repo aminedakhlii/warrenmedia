@@ -30,6 +30,8 @@ export default function Header() {
   const handleSignOut = async () => {
     await signOut()
     setUser(null)
+    // Force page reload to update state everywhere
+    window.location.href = '/'
   }
 
   return (

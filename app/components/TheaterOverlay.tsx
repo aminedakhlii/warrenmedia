@@ -438,12 +438,20 @@ export default function TheaterOverlay({
               ref={playerRef}
               playbackId={playbackId}
               streamType="on-demand"
-              autoPlay
+              autoPlay="any"
               audio={isPodcast} // Audio-only mode for podcasts
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
+              onCanPlay={() => {
+                // Force play when ready
+                if (playerRef.current && !isPlaying) {
+                  playerRef.current.play?.().catch(() => {
+                    // Autoplay blocked by browser, user will need to click
+                  })
+                }
+              }}
               className={isPodcast ? 'hidden' : 'w-full h-full'}
               style={{
                 '--controls': 'none',

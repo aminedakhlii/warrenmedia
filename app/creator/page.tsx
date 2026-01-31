@@ -558,6 +558,37 @@ function UploadTab({ creator }: { creator: Creator }) {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-2">Category</label>
+            <select
+              value={uploadForm.category}
+              onChange={(e) =>
+                setUploadForm({
+                  ...uploadForm,
+                  category: e.target.value as typeof uploadForm.category,
+                })
+              }
+              className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+              disabled={uploading}
+            >
+              <option value="trending">Trending</option>
+              <option value="originals">Originals</option>
+              <option value="new_releases">New Releases</option>
+              <option value="music_videos">Music Videos</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Description (optional)</label>
+            <textarea
+              value={uploadForm.description}
+              onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
+              rows={4}
+              disabled={uploading}
+            />
+          </div>
+
           {contentType !== 'series' && (
             <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
               {uploading ? (
@@ -603,37 +634,6 @@ function UploadTab({ creator }: { creator: Creator }) {
               </p>
             </div>
           )}
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Category</label>
-            <select
-              value={uploadForm.category}
-              onChange={(e) =>
-                setUploadForm({
-                  ...uploadForm,
-                  category: e.target.value as typeof uploadForm.category,
-                })
-              }
-              className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-              disabled={uploading}
-            >
-              <option value="trending">Trending</option>
-              <option value="originals">Originals</option>
-              <option value="new_releases">New Releases</option>
-              <option value="music_videos">Music Videos</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Description (optional)</label>
-            <textarea
-              value={uploadForm.description}
-              onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-              rows={4}
-              disabled={uploading}
-            />
-          </div>
 
           {contentType === 'series' && (
             <button

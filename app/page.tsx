@@ -19,12 +19,21 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
 
-  // Get current user
+  // Get current user and listen for auth changes
   useEffect(() => {
     getCurrentUser().then(setUser)
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
-  // Fetch all data
+  // Fetch all data when user changes
   useEffect(() => {
     fetchData()
   }, [user])

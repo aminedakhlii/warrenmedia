@@ -14,13 +14,13 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    setSuccess('')
 
     try {
       if (mode === 'login') {
@@ -33,11 +33,12 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         
         // Check if email confirmation is required
         if (data?.user && !data.session) {
-          setSuccess('Account created! Please check your email to confirm your account.')
+          setVerificationEmail(email)
+          setShowVerificationDialog(true)
+          onClose() // Close signup modal
         } else {
           // Auto-confirmed (if email confirmation is disabled)
-          setSuccess('Account created successfully!')
-          setTimeout(() => onSuccess(), 2000)
+          onSuccess()
         }
       }
     } catch (err: any) {
@@ -45,6 +46,32 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showVerificationDialog) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+        <div className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4 border-2 border-blue-600">
+          <div className="text-center">
+            <div className="text-6xl mb-4">📧</div>
+            <h2 className="text-2xl font-bold mb-2 text-blue-400">Verify Your Email</h2>
+            <p className="text-gray-300 mb-4">
+              We sent a verification link to:
+            </p>
+            <p className="text-amber-400 font-semibold mb-6">{verificationEmail}</p>
+            <p className="text-sm text-gray-400 mb-6">
+              Click the link in the email to activate your account. You can close this window.
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full px-6 py-3 bg-amber-glow hover:bg-amber-600 rounded-lg font-semibold transition text-black"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
