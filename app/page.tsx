@@ -254,7 +254,10 @@ export default function HomePage() {
         {heroTitle && (
           <div className="relative flex pt-16" style={{ height: '70vh' }}>
             {/* Left Side - Featured Content */}
-            <div className="flex-1 relative group cursor-pointer" onClick={() => handleTitleClick(heroTitle)}>
+            <div 
+              className="flex-1 relative cursor-pointer transition-transform hover:scale-[1.02]" 
+              onClick={() => handleTitleClick(heroTitle)}
+            >
               <div
                 className="absolute inset-0"
                 style={{
@@ -263,47 +266,11 @@ export default function HomePage() {
                   backgroundPosition: 'center',
                 }}
               />
-              
-              {/* Minimal gradient only at bottom for text readability */}
-              <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/90 to-transparent" />
-              
-              {/* Content overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-12 z-10">
-                <div className="max-w-3xl">
-                  <h1 className="text-6xl font-bold mb-4 tracking-wider">
-                    {heroTitle.title}
-                  </h1>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleTitleClick(heroTitle)
-                    }}
-                    className="
-                      px-8 py-3 text-lg font-semibold rounded-lg
-                      bg-white/90 hover:bg-white
-                      text-black transition-all duration-300
-                      hover:scale-105 inline-flex items-center gap-2
-                    "
-                  >
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                    Watch Now
-                  </button>
-                </div>
-              </div>
             </div>
 
             {/* Right Side - Community Section */}
             <div className="w-[400px] bg-black/40 backdrop-blur-sm border-l border-gray-800 p-8 overflow-hidden">
               <CommunitySection />
-            </div>
-
-            {/* Scroll indicator */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-              <svg className="w-8 h-8 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
             </div>
           </div>
         )}

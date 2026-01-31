@@ -200,9 +200,6 @@ export default function RowSlider({
                 className="object-cover"
                 draggable={false}
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <h3 className="text-sm font-medium truncate">{titleItem.title}</h3>
-              </div>
             </div>
           ))}
         </div>
