@@ -5,6 +5,8 @@ import { supabase, type Title, type PlaybackProgress, getCurrentUser, Episode } 
 import RowSlider from './components/RowSlider'
 import TheaterOverlay from './components/TheaterOverlay'
 import Header from './components/Header'
+import CommunitySection from './components/CommunitySection'
+import SearchModal from './components/SearchModal'
 
 export default function HomePage() {
   const [heroTitle, setHeroTitle] = useState<Title | null>(null)
@@ -18,6 +20,7 @@ export default function HomePage() {
   const [resumeEpisode, setResumeEpisode] = useState<Episode | null>(null)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [showSearch, setShowSearch] = useState(false)
 
   // Get current user and listen for auth changes
   useEffect(() => {
@@ -98,7 +101,7 @@ export default function HomePage() {
         const CONTINUE_WATCHING_LIMIT = 20
 
         // Fetch progress for regular titles (films, music videos, podcasts)
-        const { data: titleProgress } = await supabase
+        const { data: titleProgress, error: titleError } = await supabase
           .from('playback_progress')
           .select(`
             *,
@@ -110,8 +113,14 @@ export default function HomePage() {
           .order('updated_at', { ascending: false })
           .limit(CONTINUE_WATCHING_LIMIT)
 
+        if (titleError) {
+          console.error('Error fetching title progress:', titleError)
+        } else {
+          console.log('Title progress:', titleProgress)
+        }
+
         // Fetch progress for series episodes (need to get the series title)
-        const { data: episodeProgress } = await supabase
+        const { data: episodeProgress, error: episodeError } = await supabase
           .from('playback_progress')
           .select(`
             *,
@@ -128,6 +137,12 @@ export default function HomePage() {
           .gt('position_seconds', 2)
           .order('updated_at', { ascending: false })
           .limit(CONTINUE_WATCHING_LIMIT)
+
+        if (episodeError) {
+          console.error('Error fetching episode progress:', episodeError)
+        } else {
+          console.log('Episode progress:', episodeProgress)
+        }
 
         // Combine and deduplicate titles
         const titlesMap = new Map<string, Title>()
@@ -233,47 +248,70 @@ export default function HomePage() {
 
   return (
     <>
-      <Header />
-      <main className="min-h-screen">
-        {/* Hero Section */}
+      <Header onSearchClick={() => setShowSearch(true)} />
+      <main className="min-h-screen bg-black">
+        {/* Hero Section - Two Column Layout */}
         {heroTitle && (
-          <div
-            className="relative h-screen flex items-center justify-start px-8"
-            style={{
-              backgroundImage: `url(${heroTitle.poster_url})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-            }}
-          >
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+          <div className="relative flex pt-16" style={{ height: '70vh' }}>
+            {/* Left Side - Featured Content */}
+            <div className="flex-1 relative group cursor-pointer" onClick={() => handleTitleClick(heroTitle)}>
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${heroTitle.poster_url})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+              
+              {/* Gradient overlays */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/60" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black" />
+              
+              {/* Content overlay */}
+              <div className="absolute bottom-0 left-0 right-0 p-12">
+                <div className="max-w-3xl">
+                  <h1 className="text-6xl font-bold mb-4 tracking-wider">
+                    {heroTitle.title}
+                  </h1>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleTitleClick(heroTitle)
+                    }}
+                    className="
+                      px-8 py-3 text-lg font-semibold rounded-lg
+                      bg-white/90 hover:bg-white
+                      text-black transition-all duration-300
+                      hover:scale-105 inline-flex items-center gap-2
+                    "
+                  >
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    Watch Now
+                  </button>
+                </div>
+              </div>
+            </div>
 
-            {/* Content */}
-            <div className="relative z-10 max-w-2xl">
-              <h1 className="text-6xl font-bold mb-6">{heroTitle.title}</h1>
-              {heroTitle.description && (
-                <p className="text-lg text-gray-300 mb-8 line-clamp-3">
-                  {heroTitle.description}
-                </p>
-              )}
-              <button
-                onClick={() => handleTitleClick(heroTitle)}
-                className="
-                  px-12 py-4 text-xl font-semibold rounded-lg
-                  bg-amber-glow hover:bg-amber-600
-                  glow-amber transition-all duration-300
-                  hover:scale-105
-                "
-              >
-                Play
-              </button>
+            {/* Right Side - Community Section */}
+            <div className="w-[400px] bg-black/40 backdrop-blur-sm border-l border-gray-800 p-8 overflow-hidden">
+              <CommunitySection />
+            </div>
+
+            {/* Scroll indicator */}
+            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+              <svg className="w-8 h-8 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
           </div>
         )}
 
         {/* Content Rows */}
-        <div className="py-12 space-y-8">
+        <div className="py-12 space-y-12 bg-gradient-to-b from-black via-gray-950 to-black">
           {/* Continue Watching (only for logged-in users) */}
           {user && continueWatching.length > 0 && (
             <RowSlider
@@ -285,12 +323,12 @@ export default function HomePage() {
 
           {/* Trending */}
           {trending.length > 0 && (
-            <RowSlider title="Trending" titles={trending} onTitleClick={handleTitleClick} />
+            <RowSlider title="Trending Now" titles={trending} onTitleClick={handleTitleClick} />
           )}
 
           {/* Originals */}
           {originals.length > 0 && (
-            <RowSlider title="Originals" titles={originals} onTitleClick={handleTitleClick} />
+            <RowSlider title="Critically Acclaimed" titles={originals} onTitleClick={handleTitleClick} />
           )}
 
           {/* New Releases */}
@@ -311,6 +349,14 @@ export default function HomePage() {
             onClose={handleCloseTheater}
             initialPosition={resumePosition}
             initialEpisode={resumeEpisode || undefined}
+          />
+        )}
+
+        {/* Search Modal */}
+        {showSearch && (
+          <SearchModal
+            onClose={() => setShowSearch(false)}
+            onSelectTitle={handleTitleClick}
           />
         )}
       </main>

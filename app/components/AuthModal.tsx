@@ -124,10 +124,6 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <div className="p-3 bg-red-900/50 rounded-lg text-sm">{error}</div>
           )}
 
-          {success && (
-            <div className="p-3 bg-green-900/50 rounded-lg text-sm">{success}</div>
-          )}
-
           <button
             type="submit"
             disabled={loading}
