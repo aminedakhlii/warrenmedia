@@ -31,14 +31,17 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         const { data, error } = await signUp(email, password)
         if (error) throw error
         
-        // Check if email confirmation is required
-        if (data?.user && !data.session) {
-          setVerificationEmail(email)
-          setShowVerificationDialog(true)
-          onClose() // Close signup modal
-        } else {
-          // Auto-confirmed (if email confirmation is disabled)
-          onSuccess()
+        // Always show verification dialog for signups
+        // Even if email confirmation is disabled, it's good UX to inform the user
+        setVerificationEmail(email)
+        setShowVerificationDialog(true)
+        
+        // If auto-confirmed, still show the dialog but user can proceed
+        if (data?.session) {
+          // They can close the dialog and are already logged in
+          setTimeout(() => {
+            onSuccess()
+          }, 3000)
         }
       }
     } catch (err: any) {
@@ -54,14 +57,19 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         <div className="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4 border-2 border-blue-600">
           <div className="text-center">
             <div className="text-6xl mb-4">📧</div>
-            <h2 className="text-2xl font-bold mb-2 text-blue-400">Verify Your Email</h2>
+            <h2 className="text-2xl font-bold mb-2 text-blue-400">Check Your Email</h2>
             <p className="text-gray-300 mb-4">
               We sent a verification link to:
             </p>
-            <p className="text-amber-400 font-semibold mb-6">{verificationEmail}</p>
-            <p className="text-sm text-gray-400 mb-6">
-              Click the link in the email to activate your account. You can close this window.
-            </p>
+            <p className="text-amber-400 font-semibold mb-4">{verificationEmail}</p>
+            <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-yellow-200 font-semibold mb-2">
+                ⚠️ Check your spam folder!
+              </p>
+              <p className="text-xs text-gray-300">
+                The email might be in your spam/junk folder. Click the link in the email to activate your account.
+              </p>
+            </div>
             <button
               onClick={onClose}
               className="w-full px-6 py-3 bg-amber-glow hover:bg-amber-600 rounded-lg font-semibold transition text-black"
