@@ -79,42 +79,42 @@ export default function CommunitySection() {
 
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-2xl font-bold mb-6">Community</h2>
+      <h2 className="text-sm font-semibold mb-4 pb-3 text-white/95 text-glow border-b border-gray-600/50">Community</h2>
       
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
         {posts.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-gray-500 text-sm py-6">
             No community updates yet
           </div>
         ) : (
           posts.map((post) => (
             <div
               key={post.id}
-              className="bg-gray-900/50 rounded-lg p-4 hover:bg-gray-900/70 transition border border-gray-800"
+              className="bg-gray-900/50 rounded-lg p-3 hover:bg-gray-900/70 transition border border-gray-800"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-2">
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center font-semibold flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-semibold flex-shrink-0">
                   {getInitial(post.creator?.name)}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold text-sm">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-medium text-xs text-gray-200">
                       {post.creator?.name || 'Creator'}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-[10px] text-gray-500">
                       {formatTime(post.created_at)}
                     </span>
                   </div>
                   
-                  <p className="text-sm text-gray-300 break-words">
+                  <p className="text-xs text-gray-300 break-words">
                     {post.content}
                   </p>
 
                   {post.title && (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-amber-400">
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-white/80">
                       <span>📽️</span>
                       <span className="truncate">{post.title.title}</span>
                     </div>

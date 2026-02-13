@@ -153,8 +153,8 @@ export default function RowSlider({
   }, [focusedIndex])
 
   return (
-    <div className="mb-12">
-      <h2 className="text-2xl font-semibold mb-4 px-8">{title}</h2>
+    <div className="mb-10">
+      <h2 className="text-base font-semibold mb-3 px-8 text-glow">{title}</h2>
       <div
         ref={containerRef}
         className="overflow-x-scroll overflow-y-hidden scrollbar-hide cursor-grab select-none px-8"

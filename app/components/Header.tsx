@@ -62,26 +62,40 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-sm border-b border-gray-800/50">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-8 py-4">
-          <Link href="/" className="text-2xl font-bold tracking-wider">
-            Warren <span className="text-amber-glow">MEDIA</span>
+          <Link href="/" className="flex items-baseline gap-2.5 tracking-wider">
+            {/* Mockup: prominent W in dark square, illuminated */}
+            <span className="flex items-center justify-center w-11 h-11 rounded-md bg-gray-900/90 text-white text-2xl font-bold text-glow border border-white/40 shrink-0 shadow-lg">
+              W
+            </span>
+            <span className="text-xl font-bold text-glow">Warren</span>
+            <span className="text-sm font-medium text-white/90 align-baseline">MEDIA</span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            {/* Search Button */}
+          <div className="flex items-center gap-3">
+            {/* Search (mockup: search icon) */}
             {onSearchClick && (
               <button
                 onClick={onSearchClick}
-                className="w-10 h-10 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition"
+                className="w-9 h-9 rounded-full bg-gray-800/80 hover:bg-gray-700 flex items-center justify-center transition text-glow"
                 title="Search"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
             )}
-
+            {/* Notifications (mockup: bell icon) */}
+            <button
+              className="w-9 h-9 rounded-full bg-gray-800/80 hover:bg-gray-700 flex items-center justify-center transition text-glow"
+              title="Notifications"
+              aria-label="Notifications"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </button>
             {/* Profile Dropdown */}
             {!loading && (
               <div className="relative">
@@ -93,9 +107,9 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
                       setShowAuthModal(true)
                     }
                   }}
-                  className="w-10 h-10 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center transition"
+                  className="w-9 h-9 rounded-full bg-gray-800/80 hover:bg-gray-700 flex items-center justify-center transition text-glow"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </button>
