@@ -273,7 +273,7 @@ export default function HomePage() {
               
               {/* Title + Watch Now (mockup: THE ENIGMA style above button) */}
               <div className="absolute bottom-0 left-0 right-0 flex flex-col items-start justify-end p-6 md:p-12 gap-3 z-10">
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-[0.2em] uppercase text-white text-glow-strong">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-[0.05em] uppercase text-white text-glow-strong whitespace-nowrap">
                   {heroTitle.title}
                 </h1>
                 <button
