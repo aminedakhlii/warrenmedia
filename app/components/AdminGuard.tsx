@@ -28,31 +28,36 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   }, [])
 
   async function checkAuth() {
+    const log = (msg: string, obj?: unknown) => {
+      console.log('[AdminGuard]', msg, obj !== undefined ? obj : '')
+    }
     try {
+      log('Fetching current user...')
       const user = await getCurrentUser()
-      
+      log('getCurrentUser result:', user ? { id: user.id, email: user.email } : null)
+
       if (!user) {
-        // Not logged in - redirect to homepage
-        console.warn('Admin access denied: Not authenticated')
+        log('Admin access denied: Not authenticated')
         router.push('/?error=admin_login_required')
         return
       }
 
       setIsAuthenticated(true)
+      log('Calling isAdmin with user.id:', user.id)
 
-      // Check if user is admin
       const adminStatus = await isAdmin(user.id)
-      
+      log('isAdmin result:', adminStatus)
+
       if (!adminStatus) {
-        // Logged in but not admin - redirect with error
-        console.warn('Admin access denied: User is not an admin', user.id)
+        log('Admin access denied: isAdmin returned false for user.id:', user.id)
         router.push('/?error=admin_access_denied')
         return
       }
 
+      log('Admin access granted')
       setIsAdminUser(true)
     } catch (error) {
-      console.error('Error checking admin auth:', error)
+      console.error('[AdminGuard] Error checking admin auth:', error)
       router.push('/?error=admin_check_failed')
     } finally {
       setLoading(false)

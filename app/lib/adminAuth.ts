@@ -7,6 +7,10 @@
 
 import { supabase, getCurrentUser } from './supabaseClient'
 
+function adminLog(msg: string, obj?: unknown) {
+  console.log('[AdminAuth]', msg, obj !== undefined ? obj : '')
+}
+
 /**
  * Check if a user is an admin
  * @param userId - User UUID to check
@@ -14,19 +18,30 @@ import { supabase, getCurrentUser } from './supabaseClient'
  */
 export async function isAdmin(userId: string): Promise<boolean> {
   try {
+    const { data: { session } } = await supabase.auth.getSession()
+    adminLog('Session present:', !!session)
+    adminLog('Checking admin for userId:', userId)
     const { data, error } = await supabase
       .from('admin_users')
       .select('user_id')
       .eq('user_id', userId)
       .single()
 
-    if (error || !data) {
+    adminLog('admin_users query result:', { data, error: error ? { message: error.message, code: error.code, details: error.details } : null })
+
+    if (error) {
+      adminLog('Admin check failed: Supabase error', error.message)
+      return false
+    }
+    if (!data) {
+      adminLog('Admin check failed: No row returned (RLS may be blocking or user_id not in table)')
       return false
     }
 
+    adminLog('Admin check passed: user_id found in admin_users')
     return true
   } catch (error) {
-    console.error('Error checking admin status:', error)
+    adminLog('Exception in isAdmin:', error)
     return false
   }
 }
