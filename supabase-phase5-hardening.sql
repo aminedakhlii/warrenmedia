@@ -59,19 +59,24 @@ CREATE TABLE IF NOT EXISTS admin_users (
 -- Index for fast admin checks
 CREATE INDEX IF NOT EXISTS idx_admin_users_user_id ON admin_users(user_id);
 
--- RLS: Only admins can view admin list
+-- Function used by INSERT policy (must exist before policy; SECURITY DEFINER avoids RLS recursion)
+CREATE OR REPLACE FUNCTION is_admin(check_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (SELECT 1 FROM admin_users WHERE user_id = check_user_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS: avoid self-reference in policies (causes infinite recursion)
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Only admins can view admin list" ON admin_users
-  FOR SELECT USING (
-    auth.uid() IN (SELECT user_id FROM admin_users)
-  );
+-- Users can read only their own row (no subquery on admin_users)
+CREATE POLICY "Users can read own admin row" ON admin_users
+  FOR SELECT USING (auth.uid() = user_id);
 
--- Only existing admins can grant admin (after first manual grant)
-CREATE POLICY "Only admins can grant admin" ON admin_users
-  FOR INSERT WITH CHECK (
-    auth.uid() IN (SELECT user_id FROM admin_users)
-  );
+-- Only existing admins can grant (uses is_admin() above, no recursion)
+CREATE POLICY "Admins can grant admin" ON admin_users
+  FOR INSERT WITH CHECK (is_admin(auth.uid()));
 
 -- =============================================
 -- C) PERFORMANCE INDEXES (CRITICAL)
@@ -187,18 +192,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ON CONFLICT (user_id) DO NOTHING;
 
 -- =============================================
--- G) ADMIN CHECK FUNCTION
+-- G) ADMIN CHECK FUNCTION (also created above for RLS)
 -- =============================================
-
--- Function to check if a user is an admin
-CREATE OR REPLACE FUNCTION is_admin(check_user_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM admin_users WHERE user_id = check_user_id
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- is_admin(uuid) is already defined with admin_users RLS section above.
 
 -- =============================================
 -- PHASE 5 SETUP COMPLETE

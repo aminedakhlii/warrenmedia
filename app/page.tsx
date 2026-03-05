@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { supabase, type Title, type PlaybackProgress, getCurrentUser, Episode } from './lib/supabaseClient'
 import RowSlider from './components/RowSlider'
 import TheaterOverlay from './components/TheaterOverlay'
@@ -344,6 +345,16 @@ export default function HomePage() {
             onSelectTitle={handleTitleClick}
           />
         )}
+
+        {/* Footer: DMCA / Copyright */}
+        <footer className="py-6 bg-black text-center">
+          <Link
+            href="/dmca"
+            className="text-xs text-gray-500 hover:text-gray-400 transition"
+          >
+            Copyright & DMCA Policy
+          </Link>
+        </footer>
       </main>
     </>
   )

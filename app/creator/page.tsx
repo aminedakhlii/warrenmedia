@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase, getCurrentUser, getFeatureFlag, type Creator, type Title, type Season, type Episode, ContentType } from '../lib/supabaseClient'
 import CreatorPosts from '../components/CreatorPosts'
+import CreatorAgreementDialog, { hasAgreedToCreatorTerms, setCreatorAgreed } from '../components/CreatorAgreementDialog'
 
 export default function CreatorPortalPage() {
   const [user, setUser] = useState<any>(null)
@@ -12,6 +13,7 @@ export default function CreatorPortalPage() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState<'upload' | 'manage' | 'series'>('upload')
+  const [hasAgreed, setHasAgreed] = useState(true)
 
   // Application form
   const [applicationForm, setApplicationForm] = useState({
@@ -231,8 +233,22 @@ export default function CreatorPortalPage() {
     )
   }
 
+  // Creator is approved - check agreement (client-side)
+  useEffect(() => {
+    if (creator?.status === 'approved') {
+      setHasAgreed(hasAgreedToCreatorTerms())
+    }
+  }, [creator?.status])
+
   // Creator is approved - show full interface
   return (
+    <>
+      {creator?.status === 'approved' && !hasAgreed && (
+        <CreatorAgreementDialog
+          onAgree={() => setHasAgreed(true)}
+          onDisagree={() => {}}
+        />
+      )}
     <div className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
@@ -292,6 +308,7 @@ export default function CreatorPortalPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
