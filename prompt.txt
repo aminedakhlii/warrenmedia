@@ -1,0 +1,152 @@
+You are building Phase 1 of Warren Media Streaming, a cinema-first public streaming platform.
+This is a from-scratch build. There is no existing codebase.
+ABSOLUTE RULES
+Build exactly what is specified below
+Do not add features that are not explicitly listed
+Do not implement Phase 2 features
+The visual design is considered locked; focus on structure, behavior, and state
+Theater mode is the core experience — everything else supports it
+TECH STACK (LOCKED)
+Frontend: Next.js (App Router, TypeScript)
+Hosting: Vercel
+Database: Supabase
+Video Streaming: Mux (HLS playback)
+Repo: GitHub
+No authentication in Phase 1
+Content is publicly accessible
+CORE PRODUCT GOAL
+Create a cinema-first streaming site where:
+Playback happens in a fullscreen theater overlay
+Browsing UI fades away during playback
+Users return to the exact browsing position after exiting playback
+Resume playback and Continue Watching work reliably
+HOMEPAGE STRUCTURE (REQUIRED ORDER)
+Hero / Featured Title
+Continue Watching (only if playback progress exists)
+Trending
+Originals
+New Releases
+Each section (except Hero) is a horizontal row of titles.
+HERO SECTION
+Large cinematic background
+Exactly one Play button
+No secondary CTAs
+Clicking Play opens Theater Mode immediately
+ROW / SLIDER SYSTEM (CRITICAL)
+Motion & Physics
+Horizontal scrolling only
+Smooth inertial glide
+No snapping to tiles
+Continuous deceleration (analog feel, not stepped)
+Must feel closer to “free scroll” than Netflix snapping
+Input Support
+Each row must support:
+Mouse drag
+Scroll wheel
+Touch
+Keyboard arrows
+TV remote (arrow keys)
+Focus Rules
+Only one tile focused at a time
+Focused tile automatically scrolls into view
+Focus state is preserved when exiting theater mode
+Focus glow is stronger when navigating via keyboard/TV
+THEATER MODE (PRIMARY EXPERIENCE)
+Fullscreen overlay
+Background page:
+Dimmed
+Not scrollable
+Preserves scroll and focus state
+Video:
+Autoplays on open
+Uses Mux HLS streams
+Browser default controls hidden
+Controls:
+Appear on mouse move, tap, or key press
+Auto-hide after ~1.5s of inactivity
+Fade in/out smoothly
+Thin progress bar always visible
+Exit behavior:
+Returns user to same page
+Same row
+Same tile index
+Same horizontal scroll position
+VIDEO PLAYBACK (MUX)
+Each title uses a Mux Playback ID
+HLS playback
+Must work across:
+Desktop browsers
+Mobile browsers
+Keyboard / TV navigation
+Avoid unnecessary React re-renders during playback
+RESUME PLAYBACK
+Progress Tracking
+Save playback position approximately every 10 seconds
+Store in Supabase
+Throttle writes
+Resume Rules
+Resume automatically unless:
+Playback < ~2 seconds
+Playback is within last few seconds of runtime
+CONTINUE WATCHING ROW
+Appears only if playback progress exists
+Sorted by most recent activity
+Same slider behavior as other rows
+CONTENT SCOPE (PHASE 1)
+Supported
+Movies
+Series-style video (flat handling only)
+Music videos (treated as video)
+NOT IMPLEMENTED
+Podcasts
+Audio-only music
+Playlists
+Episode hierarchy
+User accounts
+System structure should allow future expansion but do not implement it now.
+ADMIN (PHASE 1 — MINIMAL)
+Create an Admin Titles Page where an admin can:
+Add title
+Add poster image URL
+Paste Mux Playback ID
+Assign category:
+Trending
+Originals
+New Releases
+Manual entry only. No auth required in Phase 1.
+VISUAL & INTERACTION RULES
+Dark, architectural, minimal
+No decorative animation
+Warm amber glow used only for:
+Play button
+Focused tile
+Active progress bar segment
+Stronger glow when navigating via keyboard/TV
+Browsing UI fades away once playback begins
+PROJECT STRUCTURE (REFERENCE)
+src/
+ ├ app/
+ │ ├ layout.tsx
+ │ ├ page.tsx
+ │ ├ admin/titles/page.tsx
+ │ ├ api/
+ │ ├ components/
+ │ │ ├ RowSlider.tsx
+ │ │ ├ TheaterOverlay.tsx
+ │ ├ lib/
+ │ │ ├ supabaseClient.ts
+ └ app/globals.css
+DELIVERY REQUIREMENTS
+Initialize Next.js App Router repo
+Use TypeScript
+Clean, readable component boundaries
+Push repo to GitHub
+Include README with:
+Setup instructions
+Environment variables
+Supabase + Mux access notes
+IMPORTANT
+If any behavior (especially slider physics, focus handling, or resume thresholds) is ambiguous:
+Stop
+Ask for clarification before implementing
+Otherwise, proceed with Phase 1 exactly as specified.

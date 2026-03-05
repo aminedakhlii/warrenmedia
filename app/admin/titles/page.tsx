@@ -821,6 +821,13 @@ function AdminTitlesContent() {
               <div className="text-2xl mb-2">📊</div>
               <div className="text-sm font-medium">Analytics</div>
             </Link>
+            <Link
+              href="/admin/music"
+              className="p-4 bg-gray-800 hover:bg-gray-700 rounded-lg transition text-center"
+            >
+              <div className="text-2xl mb-2">🎵</div>
+              <div className="text-sm font-medium">Music Channel</div>
+            </Link>
           </div>
         </div>
 

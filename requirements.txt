@@ -1,0 +1,173 @@
+Warren Media Streaming — Phase 1
+Consolidated Functional & Technical Requirements
+1. Product Goal (Non-Negotiable)
+Build a cinema-first public streaming platform where the primary experience is fullscreen theater playback, and browsing exists only to support entry into that mode.
+There is:
+No user authentication in Phase 1
+No monetization
+No audio-only content
+No playlists
+No social features
+2. Core Experience Requirements
+2.1 Theater Mode (Primary UX)
+Playback opens in a fullscreen overlay
+Background page:
+Dimmed
+Non-scrollable
+Preserves state (scroll + focus)
+Playback:
+Autoplays on open
+Uses Mux HLS streams
+Browser default controls are disabled
+Controls:
+Appear only on user interaction (mouse move, tap, key press)
+Auto-hide after ~1.5 seconds of inactivity
+Fade in/out smoothly
+A thin progress bar remains visible at all times
+Exit behavior:
+Returns the user to:
+Same page
+Same row
+Same tile index
+Same horizontal scroll offset
+Acceptance Criteria
+Enter/exit theater mode without layout jumps
+State restoration works even after multiple opens
+No scrolling of background during playback
+3. Homepage Structure
+3.1 Required Section Order
+Top → Bottom:
+Hero / Featured Title
+Continue Watching (conditional)
+Trending
+Originals
+New Releases
+Sections are vertically stacked, with horizontal rows only.
+4. Hero Section
+Large cinematic background (image or video)
+Exactly one primary Play button
+No secondary CTAs
+Clicking Play opens Theater Mode immediately
+5. Slider / Row System (Critical)
+5.1 Motion & Physics
+Horizontal scrolling only
+Inertial glide
+No snapping to tiles
+Deceleration must be continuous (no easing jumps)
+Motion should feel analog, not stepped
+5.2 Input Support
+Each row must support:
+Mouse drag
+Scroll wheel
+Touch
+Keyboard arrows
+TV remote (arrow keys)
+5.3 Focus Behavior
+Only one tile focused at a time
+Focused tile:
+Scrolls into view automatically
+Shows amber glow
+Focus state:
+Is preserved when entering/exiting theater mode
+Strengthens when navigation is via keyboard/TV
+Acceptance Criteria
+No snap alignment after scrolling
+Focus survives theater exit
+Keyboard navigation works without mouse usage
+6. Video Playback
+6.1 Streaming
+Each title uses a Mux Playback ID
+Playback via HLS
+Must function on:
+Desktop browsers
+Mobile browsers
+TV-style keyboard navigation
+6.2 Performance
+Avoid unnecessary re-renders during playback
+Prevent buffering spikes on seek
+Throttle progress writes (see Resume Playback)
+7. Resume Playback & Progress Tracking
+7.1 Progress Storage
+Save playback position approximately every 10 seconds
+Stored in Supabase
+Public content but per-device/session tracking is acceptable
+7.2 Resume Rules
+Resume playback automatically unless:
+Playback time < ~2 seconds
+Playback is within the final few seconds of total duration
+7.3 Continue Watching Row
+Appears only if progress exists
+Sorted by most recent activity
+Uses same slider behavior as other rows
+8. Content Model (Phase 1)
+8.1 Supported Content
+Movies
+Series-style video (flat handling for now)
+Music videos (treated as video)
+8.2 Explicitly Out of Scope
+Podcasts
+Audio-only music
+Playlists
+Series episode logic (future expansion only)
+9. Admin Functionality (Minimal Phase 1)
+9.1 Admin Titles Page
+Admin can:
+Add a title
+Add poster image URL
+Paste Mux Playback ID
+Assign category:
+Trending
+Originals
+New Releases
+Manual entry is acceptable. No bulk upload required.
+10. Visual & Interaction Design Rules
+Dark, architectural, minimal
+No decorative animations
+Warm amber glow used only for:
+Play button
+Focused tile
+Active progress segment
+Stronger glow when navigating via keyboard/TV
+Browsing UI fades away during playback
+11. Tech Stack (Locked)
+Frontend: Next.js (App Router)
+Hosting: Vercel
+Database: Supabase
+Video Streaming: Mux
+Repo: GitHub (owned by client)
+Domain (later): warrenmedia.tv
+12. Scalability & Future-Proofing (No Implementation Yet)
+System must be structured to later support:
+Additional categories
+Series/episode hierarchy
+Webhooks (Mux/Supabase automation)
+Audio-only content (Phase 2)
+But none of the above are implemented in Phase 1.
+13. Repository & Ownership
+Repo initialized from scratch
+Uses Next.js App Router
+Pushed to GitHub
+Ownership transferred to client
+Clear README with:
+Setup steps
+Environment variables
+Mux + Supabase access instructions
+14. Deployment & Delivery
+14.1 Deployment
+Deployed to Vercel
+Clean environment configuration
+No manual server setup required
+14.2 Documentation
+Repo-level documentation
+Admin usage notes
+Architecture overview
+Clear handoff for Supabase and Mux access
+15. Acceptance Criteria Summary
+Phase 1 is accepted when:
+Theater mode UX behaves exactly as specified
+Sliders exhibit inertial, non-snapping motion
+Resume + Continue Watching works reliably
+Playback is smooth across devices
+Admin can add content manually
+Repo is client-owned and documented
+Deployed build runs on Vercel without local dependencies

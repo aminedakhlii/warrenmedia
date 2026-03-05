@@ -153,6 +153,54 @@ export type FeatureFlag = {
   updated_at: string
 }
 
+// Music Channel
+export type MusicChannelSettings = {
+  id: string
+  is_live: boolean
+  loop_enabled: boolean
+  ad_playback_id: string | null
+  ad_duration_seconds: number
+  updated_at: string
+}
+
+export type MusicChannelPlaylistItem = {
+  id: string
+  title_id: string
+  position: number
+  is_active: boolean
+  created_at: string
+  title?: Title
+}
+
+export async function getMusicChannelSettings(): Promise<MusicChannelSettings | null> {
+  try {
+    const { data } = await supabase
+      .from('music_channel_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle()
+    return data as MusicChannelSettings | null
+  } catch {
+    return null
+  }
+}
+
+export async function getMusicChannelPlaylist(): Promise<(MusicChannelPlaylistItem & { title: Title })[]> {
+  try {
+    const { data } = await supabase
+      .from('music_channel_playlist')
+      .select(`
+        *,
+        title:titles(*)
+      `)
+      .eq('is_active', true)
+      .order('position', { ascending: true })
+    return (data || []) as (MusicChannelPlaylistItem & { title: Title })[]
+  } catch {
+    return []
+  }
+}
+
 // Feature Flag helpers
 export async function getFeatureFlag(featureName: string): Promise<boolean> {
   try {

@@ -69,11 +69,14 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
             <span className="flex items-center justify-center w-11 h-11 rounded-md bg-gray-900/90 text-white text-2xl font-bold text-glow border border-white/40 shrink-0 shadow-lg">
               W
             </span>
-            <span className="text-xl font-bold text-glow">Warren</span>
-            <span className="text-sm font-medium text-white/90 align-baseline">MEDIA</span>
+            <span className="text-xl font-bold text-glow">Warren MEDIA</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <Link href="/music" className="text-sm text-gray-200 hover:text-white transition font-bold">
+              Music TV
+            </Link>
+            <div className="flex items-center gap-3">
             {/* Search (mockup: search icon) */}
             {onSearchClick && (
               <button
@@ -168,6 +171,7 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
       </header>
