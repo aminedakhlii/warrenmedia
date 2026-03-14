@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { signOut, getCurrentUser, onAuthStateChange, supabase } from '../lib/supabaseClient'
+import { isAdmin } from '../lib/adminAuth'
 import AuthModal from './AuthModal'
 
 interface HeaderProps {
@@ -15,24 +16,30 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isCreator, setIsCreator] = useState(false)
+  const [isAdminUser, setIsAdminUser] = useState(false)
 
   useEffect(() => {
     // Get initial user
-    getCurrentUser().then((user) => {
+    getCurrentUser().then(async (user) => {
       setUser(user)
       setLoading(false)
       if (user) {
         checkCreatorStatus(user.id)
+        const admin = await isAdmin(user.id)
+        setIsAdminUser(admin)
       }
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = onAuthStateChange((user) => {
+    const { data: { subscription } } = onAuthStateChange(async (user) => {
       setUser(user)
       if (user) {
         checkCreatorStatus(user.id)
+        const admin = await isAdmin(user.id)
+        setIsAdminUser(admin)
       } else {
         setIsCreator(false)
+        setIsAdminUser(false)
       }
     })
 
@@ -143,7 +150,20 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
                           <span>Profile</span>
                         </Link>
 
-                        {isCreator && (
+                        {isAdminUser && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setShowProfileDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-800 transition text-amber-400"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                            </svg>
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        )}
+
+                        {isCreator ? (
                           <Link
                             href="/creator"
                             onClick={() => setShowProfileDropdown(false)}
@@ -153,6 +173,17 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                             <span>Creator Space</span>
+                          </Link>
+                        ) : (
+                          <Link
+                            href="/creator"
+                            onClick={() => setShowProfileDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-gray-800 transition"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            <span>Become a creator</span>
                           </Link>
                         )}
 
