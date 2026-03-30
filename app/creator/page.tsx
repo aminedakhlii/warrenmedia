@@ -63,8 +63,14 @@ export default function CreatorPortalPage() {
     setMessage('')
 
     try {
+      const userEmail = user.email as string | undefined
+      if (!userEmail) {
+        throw new Error('No account email found. Please re-login and try again.')
+      }
+
       const { error } = await supabase.from('creators').insert({
         user_id: user.id,
+        email: userEmail,
         ...applicationForm,
         status: 'pending',
       })
