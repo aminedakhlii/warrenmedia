@@ -26,6 +26,13 @@ export default function CreatorPortalPage() {
     init()
   }, [])
 
+  // Must run every render (before any early return): sync agreement state when creator becomes approved
+  useEffect(() => {
+    if (creator?.status === 'approved') {
+      setHasAgreed(hasAgreedToCreatorTerms())
+    }
+  }, [creator?.status])
+
   async function init() {
     try {
       const currentUser = await getCurrentUser()
@@ -238,13 +245,6 @@ export default function CreatorPortalPage() {
       </div>
     )
   }
-
-  // Creator is approved - check agreement (client-side)
-  useEffect(() => {
-    if (creator?.status === 'approved') {
-      setHasAgreed(hasAgreedToCreatorTerms())
-    }
-  }, [creator?.status])
 
   // Creator is approved - show full interface
   return (
