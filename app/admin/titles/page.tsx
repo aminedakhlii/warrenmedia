@@ -42,6 +42,9 @@ function AdminTitlesContent() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState<'titles' | 'series'>('titles')
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
+  const [editTitleForm, setEditTitleForm] = useState({ title: '', description: '', poster_url: '' })
+  const [savingTitleId, setSavingTitleId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTitles()
@@ -338,9 +341,50 @@ function AdminTitlesContent() {
       if (error) throw error
 
       setMessage('Title deleted successfully!')
+      if (editingTitleId === id) setEditingTitleId(null)
       fetchTitles()
     } catch (error) {
       setMessage('Error deleting title: ' + (error as Error).message)
+    }
+  }
+
+  function startEditTitle(t: Title) {
+    setEditingTitleId(t.id)
+    setEditTitleForm({
+      title: t.title,
+      description: t.description ?? '',
+      poster_url: t.poster_url,
+    })
+    setMessage('')
+  }
+
+  async function saveTitleMetadata(id: string) {
+    const title = editTitleForm.title.trim()
+    const poster_url = editTitleForm.poster_url.trim()
+    if (!title || !poster_url) {
+      setMessage('Error: Title and poster URL are required.')
+      return
+    }
+    setSavingTitleId(id)
+    setMessage('')
+    try {
+      const { error } = await supabase
+        .from('titles')
+        .update({
+          title,
+          poster_url,
+          description: editTitleForm.description.trim() || null,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+      setMessage('Title metadata updated.')
+      setEditingTitleId(null)
+      fetchTitles()
+    } catch (error) {
+      setMessage('Error saving title: ' + (error as Error).message)
+    } finally {
+      setSavingTitleId(null)
     }
   }
 
@@ -760,27 +804,109 @@ function AdminTitlesContent() {
           <h2 className="text-2xl font-semibold mb-4">All Titles ({titles.length})</h2>
           <div className="space-y-4">
             {titles.map((title) => (
-              <div key={title.id} className="flex items-center gap-4 p-4 bg-gray-800 rounded-lg">
-                <img
-                  src={title.poster_url}
-                  alt={title.title}
-                  className="w-20 h-30 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <h3 className="font-semibold">{title.title}</h3>
-                  <p className="text-sm text-gray-400">
-                    {title.content_type} • {title.category}
-                  </p>
-                  {title.mux_playback_id && (
-                    <p className="text-xs text-gray-500">Mux ID: {title.mux_playback_id}</p>
+              <div
+                key={title.id}
+                className="bg-gray-800 rounded-lg border border-gray-700/80 overflow-hidden"
+              >
+                <div className="flex items-start gap-4 p-4">
+                  <img
+                    src={
+                      editingTitleId === title.id
+                        ? editTitleForm.poster_url || title.poster_url
+                        : title.poster_url
+                    }
+                    alt={title.title}
+                    className="w-20 h-[120px] object-cover rounded-md border border-gray-600 shrink-0"
+                  />
+                  {editingTitleId === title.id ? (
+                    <div className="flex-1 min-w-0 space-y-3 border border-amber-500/25 rounded-lg p-4 bg-gray-900/60">
+                      <p className="text-xs font-medium text-amber-400/90 uppercase tracking-wide">
+                        Edit metadata
+                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
+                        <input
+                          type="text"
+                          value={editTitleForm.title}
+                          onChange={(e) => setEditTitleForm({ ...editTitleForm, title: e.target.value })}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Poster URL *</label>
+                        <input
+                          type="url"
+                          value={editTitleForm.poster_url}
+                          onChange={(e) =>
+                            setEditTitleForm({ ...editTitleForm, poster_url: e.target.value })
+                          }
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                          placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                        <textarea
+                          value={editTitleForm.description}
+                          onChange={(e) =>
+                            setEditTitleForm({ ...editTitleForm, description: e.target.value })
+                          }
+                          rows={4}
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow resize-y min-h-[80px]"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => saveTitleMetadata(title.id)}
+                          disabled={savingTitleId === title.id}
+                          className="px-4 py-2 bg-amber-glow hover:bg-amber-600 text-black rounded-lg font-semibold text-sm transition disabled:opacity-50"
+                        >
+                          {savingTitleId === title.id ? 'Saving…' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingTitleId(null)}
+                          disabled={savingTitleId === title.id}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-white">{title.title}</h3>
+                      <p className="text-sm text-gray-400">
+                        {title.content_type} • {title.category}
+                      </p>
+                      {title.mux_playback_id && (
+                        <p className="text-xs text-gray-500 mt-1">Mux ID: {title.mux_playback_id}</p>
+                      )}
+                      {title.description && (
+                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">{title.description}</p>
+                      )}
+                    </div>
+                  )}
+                  {editingTitleId !== title.id && (
+                    <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => startEditTitle(title)}
+                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTitle(title.id)}
+                        className="px-4 py-2 bg-red-900/80 hover:bg-red-700 border border-red-800 rounded-lg transition text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
-                <button
-                  onClick={() => handleDeleteTitle(title.id)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition"
-                >
-                  Delete
-                </button>
               </div>
             ))}
             {titles.length === 0 && (

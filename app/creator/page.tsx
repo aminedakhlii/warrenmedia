@@ -708,6 +708,9 @@ function ManageContentTab({ creator }: { creator: Creator }) {
   const [titles, setTitles] = useState<Title[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '', poster_url: '' })
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTitles()
@@ -738,9 +741,51 @@ function ManageContentTab({ creator }: { creator: Creator }) {
       if (error) throw error
 
       setMessage('✅ Content deleted successfully!')
+      if (editingId === titleId) setEditingId(null)
       fetchTitles()
     } catch (error) {
       setMessage('❌ Error deleting content: ' + (error as Error).message)
+    }
+  }
+
+  function startEdit(t: Title) {
+    setEditingId(t.id)
+    setEditForm({
+      title: t.title,
+      description: t.description ?? '',
+      poster_url: t.poster_url,
+    })
+    setMessage('')
+  }
+
+  async function saveEdit(titleId: string) {
+    const title = editForm.title.trim()
+    const poster_url = editForm.poster_url.trim()
+    if (!title || !poster_url) {
+      setMessage('❌ Title and poster URL are required.')
+      return
+    }
+    setSavingId(titleId)
+    setMessage('')
+    try {
+      const { error } = await supabase
+        .from('titles')
+        .update({
+          title,
+          poster_url,
+          description: editForm.description.trim() || null,
+        })
+        .eq('id', titleId)
+        .eq('creator_id', creator.id)
+
+      if (error) throw error
+      setMessage('✅ Details updated.')
+      setEditingId(null)
+      fetchTitles()
+    } catch (error) {
+      setMessage('❌ Error saving: ' + (error as Error).message)
+    } finally {
+      setSavingId(null)
     }
   }
 
@@ -771,26 +816,95 @@ function ManageContentTab({ creator }: { creator: Creator }) {
           {titles.map((title) => (
             <div
               key={title.id}
-              className="flex items-center gap-4 bg-gray-800 rounded-lg p-4"
+              className="bg-gray-800 rounded-lg border border-gray-700/80 overflow-hidden"
             >
-              <img
-                src={title.poster_url}
-                alt={title.title}
-                className="w-20 h-30 object-cover rounded"
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">{title.title}</h3>
-                <p className="text-sm text-gray-400 capitalize">{title.content_type}</p>
-                <p className="text-sm text-gray-500">
-                  {title.mux_playback_id ? '✅ Ready' : '⏳ Processing'}
-                </p>
+              <div className="flex items-start gap-4 p-4">
+                <img
+                  src={editingId === title.id ? editForm.poster_url || title.poster_url : title.poster_url}
+                  alt={title.title}
+                  className="w-20 h-[120px] object-cover rounded-md border border-gray-600 shrink-0"
+                />
+                {editingId === title.id ? (
+                  <div className="flex-1 min-w-0 space-y-3 border border-amber-500/25 rounded-lg p-4 bg-gray-900/60">
+                    <p className="text-xs font-medium text-amber-400/90 uppercase tracking-wide">Edit metadata</p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Title *</label>
+                      <input
+                        type="text"
+                        value={editForm.title}
+                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Poster URL *</label>
+                      <input
+                        type="url"
+                        value={editForm.poster_url}
+                        onChange={(e) => setEditForm({ ...editForm, poster_url: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                      <textarea
+                        value={editForm.description}
+                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        rows={4}
+                        className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow resize-y min-h-[80px]"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => saveEdit(title.id)}
+                        disabled={savingId === title.id}
+                        className="px-4 py-2 bg-amber-glow hover:bg-amber-600 text-black rounded-lg font-semibold text-sm transition disabled:opacity-50"
+                      >
+                        {savingId === title.id ? 'Saving…' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        disabled={savingId === title.id}
+                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg text-white">{title.title}</h3>
+                    <p className="text-sm text-gray-400 capitalize">{title.content_type}</p>
+                    <p className="text-sm text-gray-500">
+                      {title.mux_playback_id ? '✅ Ready' : '⏳ Processing'}
+                    </p>
+                    {title.description && (
+                      <p className="text-sm text-gray-500 mt-2 line-clamp-2">{title.description}</p>
+                    )}
+                  </div>
+                )}
+                {editingId !== title.id && (
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(title)}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg transition text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteTitle(title.id)}
+                      className="px-4 py-2 bg-red-900/80 hover:bg-red-700 border border-red-800 rounded-lg transition text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={() => deleteTitle(title.id)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition text-sm"
-              >
-                Delete
-              </button>
             </div>
           ))}
         </div>

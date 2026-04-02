@@ -34,6 +34,28 @@ async function logUploadAttempt(userId: string): Promise<void> {
   }
 }
 
+/**
+ * Mux `new_asset_settings.passthrough` is max 255 characters.
+ * We only keep tiny identifiers for optional Mux dashboard context.
+ * Full title, description, and app state stay in Supabase — nothing in this repo reads passthrough.
+ */
+function buildMuxPassthrough(
+  creatorId: string | undefined,
+  metadata?: { title?: string; description?: string }
+): string {
+  const id = (creatorId ?? '').trim()
+  const title = metadata?.title?.trim()
+  if (!title) return JSON.stringify({ creatorId: id })
+
+  for (let len = Math.min(title.length, 200); len >= 0; len--) {
+    const s = JSON.stringify(
+      len > 0 ? { creatorId: id, title: title.slice(0, len) } : { creatorId: id }
+    )
+    if (s.length <= 255) return s
+  }
+  return JSON.stringify({ creatorId: id })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { creatorId, metadata } = await request.json()
@@ -82,7 +104,7 @@ export async function POST(request: NextRequest) {
         cors_origin: '*',
         new_asset_settings: {
           playback_policy: ['public'],
-          passthrough: JSON.stringify({ creatorId, ...metadata }),
+          passthrough: buildMuxPassthrough(creatorId, metadata),
         },
       }),
     })
