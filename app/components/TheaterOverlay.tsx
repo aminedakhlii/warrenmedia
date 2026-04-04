@@ -14,6 +14,12 @@ import PreRollAd from './PreRollAd'
 import CommentsSection from './CommentsSection'
 import CreatorPosts from './CreatorPosts'
 
+function getMuxMedia(el: unknown): HTMLMediaElement | null {
+  if (!el || typeof el !== 'object') return null
+  const anyEl = el as { media?: HTMLMediaElement }
+  return anyEl.media ?? (el as HTMLMediaElement)
+}
+
 interface TheaterOverlayProps {
   title: Title
   onClose: () => void
@@ -28,6 +34,9 @@ export default function TheaterOverlay({
   initialEpisode,
 }: TheaterOverlayProps) {
   const playerRef = useRef<any>(null)
+  const progressBarRef = useRef<HTMLDivElement>(null)
+  const scrubbingRef = useRef(false)
+  const lastTapRef = useRef<{ time: number; side: 'left' | 'right' } | null>(null)
   const [showControls, setShowControls] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -252,10 +261,37 @@ export default function TheaterOverlay({
     [user, title.id, title.content_type, currentEpisode, duration]
   )
 
+  const setPlayerTime = useCallback((seconds: number) => {
+    const media = getMuxMedia(playerRef.current)
+    if (!media) return
+    const dur =
+      Number.isFinite(media.duration) && media.duration > 0 ? media.duration : duration
+    if (!dur || dur <= 0) return
+    const t = Math.max(0, Math.min(dur, seconds))
+    media.currentTime = t
+    setCurrentTime(t)
+  }, [duration])
+
+  const seekFromProgressEvent = useCallback(
+    (clientX: number) => {
+      const bar = progressBarRef.current
+      if (!bar) return
+      const media = getMuxMedia(playerRef.current)
+      const dur =
+        Number.isFinite(media?.duration) && media!.duration > 0 ? media!.duration : duration
+      if (dur <= 0) return
+      const rect = bar.getBoundingClientRect()
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      setPlayerTime(ratio * dur)
+    },
+    [duration, setPlayerTime]
+  )
+
   // Handle time update
   const handleTimeUpdate = useCallback(() => {
-    if (playerRef.current) {
-      const time = playerRef.current.currentTime
+    const media = getMuxMedia(playerRef.current)
+    if (media) {
+      const time = media.currentTime
       setCurrentTime(time)
       saveProgress(time)
     }
@@ -263,12 +299,12 @@ export default function TheaterOverlay({
 
   // Handle loaded metadata
   const handleLoadedMetadata = useCallback(() => {
-    if (playerRef.current) {
-      setDuration(playerRef.current.duration)
+    const media = getMuxMedia(playerRef.current)
+    if (media) {
+      setDuration(media.duration)
 
-      // Resume from saved position
-      if (initialPosition > 2 && initialPosition < playerRef.current.duration - 5) {
-        playerRef.current.currentTime = initialPosition
+      if (initialPosition > 2 && initialPosition < media.duration - 5) {
+        media.currentTime = initialPosition
       }
     }
   }, [initialPosition])
@@ -278,10 +314,8 @@ export default function TheaterOverlay({
     setCurrentEpisode(episode)
     setShowEpisodeSelector(false)
     setCurrentTime(0)
-    // Reset player with new episode
-    if (playerRef.current) {
-      playerRef.current.currentTime = 0
-    }
+    const media = getMuxMedia(playerRef.current)
+    if (media) media.currentTime = 0
   }
 
   // Keyboard controls
@@ -309,17 +343,19 @@ export default function TheaterOverlay({
             playerRef.current.play()
           }
           break
-        case 'ArrowLeft':
+        case 'ArrowLeft': {
           e.preventDefault()
-          playerRef.current.currentTime = Math.max(0, playerRef.current.currentTime - 10)
+          const m = getMuxMedia(playerRef.current)
+          if (m) m.currentTime = Math.max(0, m.currentTime - 10)
           break
-        case 'ArrowRight':
+        }
+        case 'ArrowRight': {
           e.preventDefault()
-          playerRef.current.currentTime = Math.min(
-            playerRef.current.duration,
-            playerRef.current.currentTime + 10
-          )
+          const m2 = getMuxMedia(playerRef.current)
+          if (m2)
+            m2.currentTime = Math.min(m2.duration || duration, m2.currentTime + 10)
           break
+        }
         case 'f':
           e.preventDefault()
           if (document.fullscreenElement) {
@@ -333,7 +369,7 @@ export default function TheaterOverlay({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, isPlaying, resetHideControlsTimer, showEpisodeSelector])
+  }, [onClose, isPlaying, resetHideControlsTimer, showEpisodeSelector, duration])
 
   // Mouse movement and touch
   useEffect(() => {
@@ -380,6 +416,33 @@ export default function TheaterOverlay({
   const playbackId = getPlaybackId()
   const isPodcast = title.content_type === 'podcast'
 
+  const handleVideoTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!playbackId || showEpisodeSelector) return
+      const media = getMuxMedia(playerRef.current)
+      const dur = Number.isFinite(media?.duration) ? media!.duration : duration
+      if (!media || dur <= 0) return
+      const touch = e.changedTouches[0]
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const mid = rect.left + rect.width / 2
+      const side: 'left' | 'right' = touch.clientX < mid ? 'left' : 'right'
+      const now = Date.now()
+      const prev = lastTapRef.current
+      if (prev && now - prev.time < 380 && prev.side === side) {
+        lastTapRef.current = null
+        const t = media.currentTime
+        setPlayerTime(t + (side === 'left' ? -10 : 10))
+        resetHideControlsTimer()
+      } else {
+        lastTapRef.current = { time: now, side }
+        window.setTimeout(() => {
+          if (lastTapRef.current?.time === now) lastTapRef.current = null
+        }, 400)
+      }
+    },
+    [playbackId, duration, showEpisodeSelector, setPlayerTime, resetHideControlsTimer]
+  )
+
   // Phase 3: Show pre-roll ad if enabled
   if (showingAd && adConfig?.ad_url) {
     return (
@@ -409,8 +472,11 @@ export default function TheaterOverlay({
       {/* Background dimmed page */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
-      {/* Video/Audio player */}
-      <div className="relative w-full h-full flex items-center justify-center">
+      {/* Video/Audio player — touch double-tap left/right: ±10s (mobile) */}
+      <div
+        className="relative w-full h-full flex items-center justify-center touch-manipulation"
+        onTouchEnd={handleVideoTouchEnd}
+      >
         {playbackId && (
           <>
             {isPodcast && (
@@ -461,13 +527,45 @@ export default function TheaterOverlay({
           </>
         )}
 
-        {/* Thin progress bar (always visible) */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800 z-30">
+        {/* Seek bar: click / drag; sits above player, below control chrome */}
+        {playbackId && (
           <div
-            className="h-full bg-amber-glow transition-all duration-100"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
+            ref={progressBarRef}
+            className="absolute bottom-0 left-0 right-0 z-[35] pt-4 pb-3 px-3 sm:px-4 cursor-pointer select-none"
+            onPointerDown={(e) => {
+              if (e.button !== 0) return
+              const bar = progressBarRef.current
+              if (!bar) return
+              scrubbingRef.current = true
+              bar.setPointerCapture(e.pointerId)
+              seekFromProgressEvent(e.clientX)
+              resetHideControlsTimer()
+            }}
+            onPointerMove={(e) => {
+              if (!scrubbingRef.current) return
+              seekFromProgressEvent(e.clientX)
+            }}
+            onPointerUp={(e) => {
+              scrubbingRef.current = false
+              const bar = progressBarRef.current
+              try {
+                bar?.releasePointerCapture(e.pointerId)
+              } catch {
+                /* noop */
+              }
+            }}
+            onPointerCancel={() => {
+              scrubbingRef.current = false
+            }}
+          >
+            <div className="h-2 sm:h-1.5 bg-gray-800/90 rounded-full overflow-hidden ring-1 ring-white/10 pointer-events-none">
+              <div
+                className="h-full bg-amber-glow transition-[width] duration-75 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Episode Selector (for series) */}
         {showEpisodeSelector && title.content_type === 'series' && (
@@ -543,13 +641,13 @@ export default function TheaterOverlay({
           </div>
         )}
 
-        {/* Custom controls */}
+        {/* Custom controls — sit above the seek bar */}
         <div
           className={`
-            absolute bottom-0 left-0 right-0 p-4 sm:p-8 pt-20 sm:pt-32 z-10
+            absolute bottom-11 left-0 right-0 p-4 sm:p-8 pt-20 sm:pt-32 z-10
             bg-gradient-to-t from-black/80 to-transparent
             transition-opacity duration-300
-            ${showControls ? 'opacity-100' : 'opacity-0'}
+            ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}
           `}
         >
           <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-4 flex-wrap">

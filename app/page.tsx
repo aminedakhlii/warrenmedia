@@ -8,6 +8,7 @@ import TheaterOverlay from './components/TheaterOverlay'
 import Header from './components/Header'
 import CommunitySection from './components/CommunitySection'
 import SearchModal from './components/SearchModal'
+import AdSenseDisplay from './components/AdSenseDisplay'
 
 export default function HomePage() {
   const [heroTitle, setHeroTitle] = useState<Title | null>(null)
@@ -250,10 +251,10 @@ export default function HomePage() {
   return (
     <>
       <Header onSearchClick={() => setShowSearch(true)} />
-      <main className="min-h-screen bg-black">
+      <main className="min-h-screen bg-black pt-16">
         {/* Hero Section - Two Column Layout (Desktop) / Full Screen (Mobile) */}
         {heroTitle && (
-          <div className="relative flex flex-col md:flex-row pt-16 md:pl-7" style={{ height: '50vh' }}>
+          <div className="relative flex flex-col md:flex-row md:pl-7" style={{ height: '50vh' }}>
             {/* Left Side - Featured Content (mockup: faded poster, title + Watch Now bottom-left) */}
             <div 
               className="flex-1 relative cursor-pointer transition-transform hover:scale-[1.02]" 
@@ -295,6 +296,12 @@ export default function HomePage() {
             </div>
           </div>
         )}
+
+        <AdSenseDisplay
+          slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME ?? ''}
+          className="px-4 py-4 bg-black"
+          format="horizontal"
+        />
 
         {/* Content Rows - unified black background */}
         <div className="py-10 space-y-10 bg-black">
@@ -345,6 +352,12 @@ export default function HomePage() {
             onSelectTitle={handleTitleClick}
           />
         )}
+
+        <AdSenseDisplay
+          slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_FOOTER ?? process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME ?? ''}
+          className="px-4 pb-4 bg-black"
+          format="horizontal"
+        />
 
         {/* Footer: DMCA / Copyright */}
         <footer className="py-6 bg-black text-center">

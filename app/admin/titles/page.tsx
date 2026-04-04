@@ -43,7 +43,12 @@ function AdminTitlesContent() {
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState<'titles' | 'series'>('titles')
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null)
-  const [editTitleForm, setEditTitleForm] = useState({ title: '', description: '', poster_url: '' })
+  const [editTitleForm, setEditTitleForm] = useState({
+    title: '',
+    description: '',
+    poster_url: '',
+    category: 'trending' as Title['category'],
+  })
   const [savingTitleId, setSavingTitleId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -354,6 +359,7 @@ function AdminTitlesContent() {
       title: t.title,
       description: t.description ?? '',
       poster_url: t.poster_url,
+      category: t.category,
     })
     setMessage('')
   }
@@ -374,6 +380,7 @@ function AdminTitlesContent() {
           title,
           poster_url,
           description: editTitleForm.description.trim() || null,
+          category: editTitleForm.category,
         })
         .eq('id', id)
 
@@ -843,6 +850,24 @@ function AdminTitlesContent() {
                           className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
                           placeholder="https://..."
                         />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
+                        <select
+                          value={editTitleForm.category}
+                          onChange={(e) =>
+                            setEditTitleForm({
+                              ...editTitleForm,
+                              category: e.target.value as Title['category'],
+                            })
+                          }
+                          className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                        >
+                          <option value="trending">Trending</option>
+                          <option value="originals">Originals</option>
+                          <option value="new_releases">New Releases</option>
+                          <option value="music_videos">Music Videos</option>
+                        </select>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>

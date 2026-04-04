@@ -709,7 +709,12 @@ function ManageContentTab({ creator }: { creator: Creator }) {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ title: '', description: '', poster_url: '' })
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    poster_url: '',
+    category: 'originals' as Title['category'],
+  })
   const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -754,6 +759,7 @@ function ManageContentTab({ creator }: { creator: Creator }) {
       title: t.title,
       description: t.description ?? '',
       poster_url: t.poster_url,
+      category: t.category,
     })
     setMessage('')
   }
@@ -774,6 +780,7 @@ function ManageContentTab({ creator }: { creator: Creator }) {
           title,
           poster_url,
           description: editForm.description.trim() || null,
+          category: editForm.category,
         })
         .eq('id', titleId)
         .eq('creator_id', creator.id)
@@ -845,6 +852,24 @@ function ManageContentTab({ creator }: { creator: Creator }) {
                         className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
                         placeholder="https://..."
                       />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
+                      <select
+                        value={editForm.category}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            category: e.target.value as Title['category'],
+                          })
+                        }
+                        className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
+                      >
+                        <option value="trending">Trending</option>
+                        <option value="originals">Originals</option>
+                        <option value="new_releases">New Releases</option>
+                        <option value="music_videos">Music Videos</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>

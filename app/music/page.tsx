@@ -11,11 +11,19 @@ import {
   type MusicChannelSettings,
 } from '../lib/supabaseClient'
 import PreRollAd from '../components/PreRollAd'
+import AdSenseDisplay from '../components/AdSenseDisplay'
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60)
   const s = Math.floor(seconds % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+/** Mux Player custom element exposes the real media element as `.media`; `.volume` on the host often does nothing. */
+function getMuxMedia(el: unknown): HTMLMediaElement | null {
+  if (!el || typeof el !== 'object') return null
+  const anyEl = el as { media?: HTMLMediaElement; volume?: number }
+  return anyEl.media ?? (el as HTMLMediaElement)
 }
 
 export default function MusicChannelPage() {
@@ -89,16 +97,19 @@ export default function MusicChannelPage() {
   }, [goToNext])
 
   const handleTimeUpdate = useCallback(() => {
-    if (playerRef.current) setCurrentTime(playerRef.current.currentTime)
+    const media = getMuxMedia(playerRef.current)
+    if (media) setCurrentTime(media.currentTime)
   }, [])
   const handleLoadedMetadata = useCallback(() => {
-    if (playerRef.current) setDuration(playerRef.current.duration)
+    const media = getMuxMedia(playerRef.current)
+    if (media) setDuration(media.duration)
   }, [])
 
   const seek = useCallback((seconds: number) => {
-    if (!playerRef.current) return
+    const media = getMuxMedia(playerRef.current)
+    if (!media) return
     const t = Math.max(0, Math.min(duration || 0, seconds))
-    playerRef.current.currentTime = t
+    media.currentTime = t
     setCurrentTime(t)
   }, [duration])
 
@@ -109,9 +120,10 @@ export default function MusicChannelPage() {
       setIsMuted(false)
       volumeBeforeMute.current = val
     }
-    if (playerRef.current) {
-      playerRef.current.muted = mute
-      if (!mute) playerRef.current.volume = val
+    const media = getMuxMedia(playerRef.current)
+    if (media) {
+      media.muted = mute
+      media.volume = mute ? 0 : val
     }
   }, [])
 
@@ -146,10 +158,14 @@ export default function MusicChannelPage() {
   }, [playbackId, goToNext])
 
   useEffect(() => {
-    if (!playerRef.current) return
-    playerRef.current.volume = volume
-    playerRef.current.muted = isMuted
-  }, [currentIndex, nowPlaying?.id])
+    const id = requestAnimationFrame(() => {
+      const media = getMuxMedia(playerRef.current)
+      if (!media) return
+      media.volume = isMuted ? 0 : volume
+      media.muted = isMuted
+    })
+    return () => cancelAnimationFrame(id)
+  }, [playbackId, currentIndex, nowPlaying?.id, volume, isMuted])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -226,6 +242,12 @@ export default function MusicChannelPage() {
           <span>24/7</span>
         </div>
       </header>
+
+      <AdSenseDisplay
+        slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_MUSIC ?? ''}
+        className="px-4 py-3 bg-black border-b border-gray-800/50"
+        format="horizontal"
+      />
 
       {/* Full-width player */}
       <div className="relative flex-1 w-full min-h-0 flex flex-col">
