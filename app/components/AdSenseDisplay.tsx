@@ -18,7 +18,7 @@ declare global {
 }
 
 export default function AdSenseDisplay({ slot, className = '', format = 'auto' }: Props) {
-  const insRef = useRef<HTMLElement>(null)
+  const insRef = useRef<HTMLModElement>(null)
   const pushed = useRef(false)
 
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT ?? DEFAULT_CLIENT
