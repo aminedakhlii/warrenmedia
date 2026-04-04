@@ -56,6 +56,40 @@ function buildMuxPassthrough(
   return JSON.stringify({ creatorId: id })
 }
 
+/**
+ * Mux direct-upload asset settings.
+ *
+ * Why playback often looks "720p" / basic:
+ * - `video_quality: "basic"` is free encoding but uses a reduced ABR ladder (lower bitrates / fewer steps).
+ * - Account default in the Mux dashboard is often `basic` if you never set `video_quality` on the API.
+ * - The player (Mux Player) is not capped in our app; max visual quality is mostly from Mux encodes + source resolution.
+ *
+ * Set env (optional):
+ * - MUX_VIDEO_QUALITY=basic | plus | premium  (plus/premium are billable; better ladders & quality)
+ * - MUX_MAX_RESOLUTION_TIER=1080p | 1440p | 2160p  (caps encode/storage/stream max; default in Mux is 1080p if unset)
+ */
+function buildNewAssetSettings(
+  creatorId: string | undefined,
+  metadata?: { title?: string; description?: string }
+): Record<string, unknown> {
+  const settings: Record<string, unknown> = {
+    playback_policies: ['public'],
+    passthrough: buildMuxPassthrough(creatorId, metadata),
+  }
+
+  const vq = process.env.MUX_VIDEO_QUALITY
+  if (vq === 'basic' || vq === 'plus' || vq === 'premium') {
+    settings.video_quality = vq
+  }
+
+  const tier = process.env.MUX_MAX_RESOLUTION_TIER
+  if (tier === '1080p' || tier === '1440p' || tier === '2160p') {
+    settings.max_resolution_tier = tier
+  }
+
+  return settings
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { creatorId, metadata } = await request.json()
@@ -102,10 +136,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         cors_origin: '*',
-        new_asset_settings: {
-          playback_policy: ['public'],
-          passthrough: buildMuxPassthrough(creatorId, metadata),
-        },
+        new_asset_settings: buildNewAssetSettings(creatorId, metadata),
       }),
     })
 

@@ -14,6 +14,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4211519601454484"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <ErrorBoundary>
           {children}
