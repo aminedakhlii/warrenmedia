@@ -83,6 +83,9 @@ export default function Header({ onSearchClick }: HeaderProps = {}) {
             <Link href="/music" className="text-sm text-gray-200 hover:text-white transition font-bold">
               Music TV
             </Link>
+            <Link href="/watch/playlists" className="text-sm text-gray-200 hover:text-white transition font-bold">
+              Playlists
+            </Link>
             <div className="flex items-center gap-3">
             {/* Search (mockup: search icon) */}
             {onSearchClick && (

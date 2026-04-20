@@ -28,6 +28,9 @@ export default function SiteFooter() {
         <Link href="/music" className={linkClass}>
           Music TV
         </Link>
+        <Link href="/watch/playlists" className={linkClass}>
+          Playlists
+        </Link>
       </nav>
       <p className="text-center text-[11px] text-gray-600 mt-4">
         © {new Date().getFullYear()} Warren Media. All rights reserved.

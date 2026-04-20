@@ -8,6 +8,7 @@ const ADMIN_LINKS = [
   { href: '/admin/creators', label: 'Creators', description: 'Review and manage creator applications' },
   { href: '/admin/ads', label: 'Ads', description: 'Configure ad campaigns and placements' },
   { href: '/admin/music', label: 'Music Channel', description: 'Playlist and live settings for Music TV' },
+  { href: '/admin/playlists', label: 'Curated playlists', description: 'Movie & music video lists for /watch/playlists' },
   { href: '/admin/moderation', label: 'Moderation', description: 'Content and user moderation' },
   { href: '/admin/analytics', label: 'Analytics', description: 'View platform analytics' },
   { href: '/admin/settings', label: 'Settings', description: 'Feature flags and global settings' },

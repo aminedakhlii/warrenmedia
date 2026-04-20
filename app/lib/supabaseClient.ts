@@ -201,6 +201,118 @@ export async function getMusicChannelPlaylist(): Promise<(MusicChannelPlaylistIt
   }
 }
 
+// Curated playlists (/watch/playlists/[slug])
+export type PlaylistType = 'movies' | 'music_videos'
+
+export type Playlist = {
+  id: string
+  name: string
+  slug: string
+  playlist_type: PlaylistType
+  is_active: boolean
+  created_at: string
+}
+
+export type PlaylistItem = {
+  id: string
+  playlist_id: string
+  title_id: string
+  sort_order: number
+  created_at: string
+}
+
+/** Titles eligible for playlist admin picker (must have Mux playback). */
+export async function getTitlesForPlaylistPicker(
+  playlistType: PlaylistType
+): Promise<Title[]> {
+  const contentType = playlistType === 'movies' ? 'film' : 'music_video'
+  const { data, error } = await supabase
+    .from('titles')
+    .select('*')
+    .eq('content_type', contentType)
+    .not('mux_playback_id', 'is', null)
+    .order('title', { ascending: true })
+
+  if (error) {
+    console.error('getTitlesForPlaylistPicker:', error)
+    return []
+  }
+  return (data || []) as Title[]
+}
+
+export async function getActivePlaylists(): Promise<Playlist[]> {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.error('getActivePlaylists:', error)
+    return []
+  }
+  return (data || []) as Playlist[]
+}
+
+export async function getPlaylistBySlug(slug: string): Promise<Playlist | null> {
+  const { data, error } = await supabase
+    .from('playlists')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (error) {
+    console.error('getPlaylistBySlug:', error)
+    return null
+  }
+  return data as Playlist | null
+}
+
+/** Ordered items with titles; caller should filter to titles with mux_playback_id for playback. */
+export async function getPlaylistItemsWithTitles(
+  playlistId: string
+): Promise<{ sort_order: number; title: Title }[]> {
+  const { data: rows, error } = await supabase
+    .from('playlist_items')
+    .select('sort_order, title_id')
+    .eq('playlist_id', playlistId)
+    .order('sort_order', { ascending: true })
+
+  if (error || !rows?.length) {
+    if (error) console.error('getPlaylistItemsWithTitles:', error)
+    return []
+  }
+
+  const titleIds = [...new Set(rows.map((r) => r.title_id as string))]
+  const { data: titles, error: tErr } = await supabase
+    .from('titles')
+    .select('*')
+    .in('id', titleIds)
+
+  if (tErr || !titles) {
+    console.error('getPlaylistItemsWithTitles titles:', tErr)
+    return []
+  }
+
+  const byId = new Map((titles as Title[]).map((t) => [t.id, t]))
+  return rows
+    .map((r) => ({
+      sort_order: r.sort_order as number,
+      title: byId.get(r.title_id as string),
+    }))
+    .filter((x): x is { sort_order: number; title: Title } => !!x.title)
+}
+
+export function slugifyPlaylistSlug(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'playlist'
+}
+
 // Feature Flag helpers
 export async function getFeatureFlag(featureName: string): Promise<boolean> {
   try {
