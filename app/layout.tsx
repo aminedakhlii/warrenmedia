@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SiteFooter from "./components/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Warren Media Streaming",
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body>
         <ErrorBoundary>
           {children}
+          <SiteFooter />
         </ErrorBoundary>
       </body>
     </html>

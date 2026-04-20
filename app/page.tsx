@@ -9,6 +9,7 @@ import Header from './components/Header'
 import CommunitySection from './components/CommunitySection'
 import SearchModal from './components/SearchModal'
 import AdSenseDisplay from './components/AdSenseDisplay'
+import HomeEditorialSection from './components/HomeEditorialSection'
 
 export default function HomePage() {
   const [heroTitle, setHeroTitle] = useState<Title | null>(null)
@@ -297,6 +298,8 @@ export default function HomePage() {
           </div>
         )}
 
+        <HomeEditorialSection />
+
         <AdSenseDisplay
           slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME ?? ''}
           className="px-4 py-4 bg-black"
@@ -353,21 +356,34 @@ export default function HomePage() {
           />
         )}
 
+        <section className="max-w-4xl mx-auto px-6 py-8 text-gray-400 text-sm leading-relaxed border-t border-gray-800/60">
+          <h2 className="text-lg font-semibold text-white mb-2">More on Warren Media</h2>
+          <p>
+            Read our{' '}
+            <Link href="/about" className="text-amber-400 hover:underline">
+              About
+            </Link>{' '}
+            page for how the service works, our{' '}
+            <Link href="/privacy" className="text-amber-400 hover:underline">
+              Privacy policy
+            </Link>{' '}
+            for data practices, and{' '}
+            <Link href="/contact" className="text-amber-400 hover:underline">
+              Contact
+            </Link>{' '}
+            to reach the team. Legal and copyright notices belong on the{' '}
+            <Link href="/dmca" className="text-amber-400 hover:underline">
+              DMCA
+            </Link>{' '}
+            page. Site links also appear in the footer below.
+          </p>
+        </section>
+
         <AdSenseDisplay
           slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME_FOOTER ?? process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME ?? ''}
           className="px-4 pb-4 bg-black"
           format="horizontal"
         />
-
-        {/* Footer: DMCA / Copyright */}
-        <footer className="py-6 bg-black text-center">
-          <Link
-            href="/dmca"
-            className="text-xs text-gray-500 hover:text-gray-400 transition"
-          >
-            Copyright & DMCA Policy
-          </Link>
-        </footer>
       </main>
     </>
   )

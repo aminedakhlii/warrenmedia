@@ -12,6 +12,7 @@ import {
 } from '../lib/supabaseClient'
 import PreRollAd from '../components/PreRollAd'
 import AdSenseDisplay from '../components/AdSenseDisplay'
+import MusicChannelEditorialSection from '../components/MusicChannelEditorialSection'
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60)
@@ -242,6 +243,8 @@ export default function MusicChannelPage() {
           <span>24/7</span>
         </div>
       </header>
+
+      <MusicChannelEditorialSection />
 
       <AdSenseDisplay
         slot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_MUSIC ?? ''}
