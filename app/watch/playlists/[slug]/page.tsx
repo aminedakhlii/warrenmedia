@@ -7,6 +7,8 @@ import MuxPlayer from '@mux/mux-player-react'
 import {
   getPlaylistBySlug,
   getPlaylistItemsWithTitles,
+  getTitlePlaybackSource,
+  hasPlayableSource,
   type Title,
   type Playlist,
 } from '../../../lib/supabaseClient'
@@ -42,10 +44,14 @@ export default function PlaylistWatchPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [playerError, setPlayerError] = useState('')
   const volumeBeforeMute = useRef(1)
 
   const nowPlaying = playable[currentIndex] ?? null
-  const playbackId = nowPlaying?.mux_playback_id ?? null
+  const playbackSource = getTitlePlaybackSource(nowPlaying)
+  const playbackId = playbackSource?.kind === 'mux' ? playbackSource.playbackId : null
+  const remoteSrc = playbackSource?.kind === 'remote' ? playbackSource.src : null
+  const playbackKey = playbackId || remoteSrc
   const total = playable.length
 
   useEffect(() => {
@@ -71,10 +77,10 @@ export default function PlaylistWatchPage() {
       setAllItems(items)
       const ready = items
         .map((x) => x.title)
-        .filter((t) => t.mux_playback_id && String(t.mux_playback_id).trim().length > 0)
+        .filter(hasPlayableSource)
       setPlayable(ready)
       if (ready.length === 0) {
-        setError('No playable videos in this playlist (missing Mux playback).')
+        setError('No playable videos in this playlist.')
       }
       setLoading(false)
     }
@@ -152,12 +158,12 @@ export default function PlaylistWatchPage() {
 
   useEffect(() => {
     const el = playerRef.current
-    if (!el || !playbackId) return
+    if (!el || !playbackKey) return
     const media = getMuxMedia(el)
     const onEnded = () => goToNext()
     media?.addEventListener('ended', onEnded)
     return () => media?.removeEventListener('ended', onEnded)
-  }, [playbackId, goToNext])
+  }, [playbackKey, goToNext])
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -167,13 +173,17 @@ export default function PlaylistWatchPage() {
       media.muted = isMuted
     })
     return () => cancelAnimationFrame(id)
-  }, [playbackId, currentIndex, nowPlaying?.id, volume, isMuted])
+  }, [playbackKey, currentIndex, nowPlaying?.id, volume, isMuted])
 
   useEffect(() => {
-    if (!playbackId) return
+    if (!playbackKey) return
     const m = getMuxMedia(playerRef.current)
     m?.play?.().catch(() => {})
-  }, [playbackId])
+  }, [playbackKey])
+
+  useEffect(() => {
+    setPlayerError('')
+  }, [playbackKey])
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
@@ -232,11 +242,12 @@ export default function PlaylistWatchPage() {
 
       <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
         <div className="relative flex-1 min-h-[38vh] bg-black">
-          {playbackId ? (
+          {playbackKey ? (
             <MuxPlayer
               ref={playerRef}
-              key={nowPlaying?.id}
-              playbackId={playbackId}
+              key={playbackKey}
+              playbackId={playbackId || undefined}
+              src={remoteSrc || undefined}
               streamType="on-demand"
               autoPlay="any"
               onEnded={handleEnded}
@@ -244,6 +255,13 @@ export default function PlaylistWatchPage() {
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
+              onError={() =>
+                setPlayerError(
+                  remoteSrc
+                    ? 'This Cision video is unavailable from its source.'
+                    : 'This video could not be loaded.'
+                )
+              }
               className="w-full h-full"
               style={
                 {
@@ -255,6 +273,11 @@ export default function PlaylistWatchPage() {
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
               No playback
+            </div>
+          )}
+          {playerError && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/80 px-6 text-center text-gray-300">
+              {playerError}
             </div>
           )}
         </div>
@@ -337,7 +360,7 @@ export default function PlaylistWatchPage() {
           {allItems.map(({ sort_order, title: t }) => {
             const playableIdx = playable.findIndex((p) => p.id === t.id)
             const isCurrent = playableIdx === currentIndex && playableIdx >= 0
-            const missing = !t.mux_playback_id
+            const missing = !hasPlayableSource(t)
             return (
               <li key={t.id}>
                 <button

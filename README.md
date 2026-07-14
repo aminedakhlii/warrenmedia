@@ -19,6 +19,7 @@ A cinema-first streaming platform built with Next.js, featuring fullscreen theat
 - **Continue Watching**: Smart tracking of viewing progress per user
 - **Multi-Input Support**: Mouse drag, scroll wheel, touch, keyboard, and TV remote navigation
 - **Mux Streaming**: HLS-based adaptive video streaming
+- **Cision Video Import**: Admin-selected Cision releases with Mux-first remote playback fallback
 - **Admin Panel**: Complete content management for all types
 
 ## 🛠️ Tech Stack
@@ -92,7 +93,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 # Optional: For server-side Mux operations
 MUX_TOKEN_ID=your-mux-token-id
 MUX_TOKEN_SECRET=your-mux-token-secret
+
+# Required for the admin-only Cision video importer
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+CISION_API_BASE_URL=https://contentapi.cision.com
+CISION_LOGIN=your-cision-login
+CISION_PASSWORD=your-cision-password
+CISION_CLIENT=your-cision-client-name
 ```
+
+Keep the service-role key and Cision credentials server-side. Never prefix them with
+`NEXT_PUBLIC_`. Run `supabase-cision-integration.sql` before opening
+`/admin/cision`; it adds Cision metadata to titles and creates the protected token
+cache used to avoid Cision's login rate limit.
 
 ### 6. Run Development Server
 

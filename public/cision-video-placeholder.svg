@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" role="img" aria-labelledby="title">
+  <title id="title">Cision video</title>
+  <rect width="600" height="900" fill="#111827"/>
+  <circle cx="300" cy="400" r="76" fill="#f59e0b"/>
+  <path d="M278 352 362 400 278 448Z" fill="#030712"/>
+  <text x="300" y="540" fill="#d1d5db" font-family="Arial, sans-serif" font-size="34" text-anchor="middle">Cision Video</text>
+</svg>

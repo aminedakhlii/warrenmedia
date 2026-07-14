@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import MuxPlayer from '@mux/mux-player-react'
-import type { Title, Season, Episode, TitleAdConfig } from '../lib/supabaseClient'
+import type { Title, Season, Episode, TitleAdConfig, TitlePlaybackSource } from '../lib/supabaseClient'
 import { 
   supabase, 
   getCurrentUser, 
   getFeatureFlag,
+  getTitlePlaybackSource,
   logPlayEvent,
   logCompletionEvent
 } from '../lib/supabaseClient'
@@ -41,6 +42,7 @@ export default function TheaterOverlay({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [playerError, setPlayerError] = useState('')
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const lastSaveTimeRef = useRef(0)
 
@@ -173,12 +175,12 @@ export default function TheaterOverlay({
     }
   }
 
-  // Get playback ID based on content type
-  const getPlaybackId = () => {
+  // Series episodes remain Mux-backed; standalone titles may fall back to Cision media.
+  const getPlaybackSource = (): TitlePlaybackSource | null => {
     if (title.content_type === 'series' && currentEpisode) {
-      return currentEpisode.mux_playback_id
+      return { kind: 'mux', playbackId: currentEpisode.mux_playback_id }
     }
-    return title.mux_playback_id
+    return getTitlePlaybackSource(title)
   }
 
   // Hide controls after inactivity
@@ -413,12 +415,16 @@ export default function TheaterOverlay({
   }
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
-  const playbackId = getPlaybackId()
+  const playbackSource = getPlaybackSource()
+  const playbackId = playbackSource?.kind === 'mux' ? playbackSource.playbackId : null
+  const remoteSrc = playbackSource?.kind === 'remote' ? playbackSource.src : null
+  const playbackKey = playbackId || remoteSrc
+  const hasPlayback = playbackSource !== null
   const isPodcast = title.content_type === 'podcast'
 
   const handleVideoTouchEnd = useCallback(
     (e: React.TouchEvent) => {
-      if (!playbackId || showEpisodeSelector) return
+      if (!hasPlayback || showEpisodeSelector) return
       const media = getMuxMedia(playerRef.current)
       const dur = Number.isFinite(media?.duration) ? media!.duration : duration
       if (!media || dur <= 0) return
@@ -440,8 +446,12 @@ export default function TheaterOverlay({
         }, 400)
       }
     },
-    [playbackId, duration, showEpisodeSelector, setPlayerTime, resetHideControlsTimer]
+    [hasPlayback, duration, showEpisodeSelector, setPlayerTime, resetHideControlsTimer]
   )
+
+  useEffect(() => {
+    setPlayerError('')
+  }, [playbackKey])
 
   // Phase 3: Show pre-roll ad if enabled
   if (showingAd && adConfig?.ad_url) {
@@ -477,7 +487,7 @@ export default function TheaterOverlay({
         className="relative w-full h-full flex items-center justify-center touch-manipulation"
         onTouchEnd={handleVideoTouchEnd}
       >
-        {playbackId && (
+        {hasPlayback && (
           <>
             {isPodcast && (
               // Static artwork overlay for podcasts
@@ -500,14 +510,22 @@ export default function TheaterOverlay({
             
             {/* Mux Player for both video and audio */}
             <MuxPlayer
-              key={playbackId} // Force re-render on episode change
+              key={playbackKey} // Force re-render when the playback source changes
               ref={playerRef}
-              playbackId={playbackId}
+              playbackId={playbackId || undefined}
+              src={remoteSrc || undefined}
               streamType="on-demand"
               autoPlay="any"
               audio={isPodcast} // Audio-only mode for podcasts
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
+              onError={() =>
+                setPlayerError(
+                  remoteSrc
+                    ? 'This Cision video is currently unavailable from its source.'
+                    : 'This video could not be loaded.'
+                )
+              }
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onCanPlay={() => {
@@ -528,7 +546,7 @@ export default function TheaterOverlay({
         )}
 
         {/* Seek bar: click / drag; sits above player, below control chrome */}
-        {playbackId && (
+        {hasPlayback && (
           <div
             ref={progressBarRef}
             className="absolute bottom-0 left-0 right-0 z-[35] pt-4 pb-3 px-3 sm:px-4 cursor-pointer select-none"
@@ -564,6 +582,18 @@ export default function TheaterOverlay({
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {!hasPlayback && (
+          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+            No playable video is available.
+          </div>
+        )}
+
+        {playerError && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 px-6 text-center text-gray-300">
+            {playerError}
           </div>
         )}
 

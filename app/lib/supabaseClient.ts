@@ -12,11 +12,34 @@ export type Title = {
   title: string
   poster_url: string
   mux_playback_id: string | null
+  external_source?: 'cision' | null
+  external_id?: string | null
+  external_media_url?: string | null
+  external_media_type?: string | null
+  external_source_url?: string | null
+  source_published_at?: string | null
   content_type: ContentType
   category: 'trending' | 'originals' | 'new_releases' | 'music_videos'
   runtime_seconds: number
   description?: string
   created_at: string
+}
+
+export type TitlePlaybackSource =
+  | { kind: 'mux'; playbackId: string }
+  | { kind: 'remote'; src: string; mediaType: string | null }
+
+export function getTitlePlaybackSource(title: Title | null | undefined): TitlePlaybackSource | null {
+  const playbackId = title?.mux_playback_id?.trim()
+  if (playbackId) return { kind: 'mux', playbackId }
+
+  const src = title?.external_media_url?.trim()
+  if (src) return { kind: 'remote', src, mediaType: title?.external_media_type || null }
+  return null
+}
+
+export function hasPlayableSource(title: Title | null | undefined): boolean {
+  return getTitlePlaybackSource(title) !== null
 }
 
 export type Season = {
@@ -221,7 +244,7 @@ export type PlaylistItem = {
   created_at: string
 }
 
-/** Titles eligible for playlist admin picker (must have Mux playback). */
+/** Titles eligible for playlist admin picker (Mux or validated external playback). */
 export async function getTitlesForPlaylistPicker(
   playlistType: PlaylistType
 ): Promise<Title[]> {
@@ -230,7 +253,7 @@ export async function getTitlesForPlaylistPicker(
     .from('titles')
     .select('*')
     .eq('content_type', contentType)
-    .not('mux_playback_id', 'is', null)
+    .or('mux_playback_id.not.is.null,external_media_url.not.is.null')
     .order('title', { ascending: true })
 
   if (error) {
@@ -269,7 +292,7 @@ export async function getPlaylistBySlug(slug: string): Promise<Playlist | null> 
   return data as Playlist | null
 }
 
-/** Ordered items with titles; caller should filter to titles with mux_playback_id for playback. */
+/** Ordered playlist items with their title records. */
 export async function getPlaylistItemsWithTitles(
   playlistId: string
 ): Promise<{ sort_order: number; title: Title }[]> {

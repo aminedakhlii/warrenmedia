@@ -7,6 +7,8 @@ import {
   getMusicChannelSettings,
   getMusicChannelPlaylist,
   getFeatureFlag,
+  getTitlePlaybackSource,
+  hasPlayableSource,
   type Title,
   type MusicChannelSettings,
 } from '../lib/supabaseClient'
@@ -46,10 +48,14 @@ export default function MusicChannelPage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [volume, setVolume] = useState(1)
   const [isMuted, setIsMuted] = useState(false)
+  const [playerError, setPlayerError] = useState('')
   const volumeBeforeMute = useRef(1)
 
   const nowPlaying = playlist[currentIndex]?.title ?? null
-  const playbackId = nowPlaying?.mux_playback_id ?? null
+  const playbackSource = getTitlePlaybackSource(nowPlaying)
+  const playbackId = playbackSource?.kind === 'mux' ? playbackSource.playbackId : null
+  const remoteSrc = playbackSource?.kind === 'remote' ? playbackSource.src : null
+  const playbackKey = playbackId || remoteSrc
   const isLive = settings?.is_live ?? true
 
   // Load settings, playlist, and ads flag
@@ -61,12 +67,13 @@ export default function MusicChannelPage() {
         getFeatureFlag('ads_system'),
       ])
       setSettings(settingsData ?? null)
-      setPlaylist(playlistData ?? [])
+      const playableItems = (playlistData ?? []).filter((item) => hasPlayableSource(item.title))
+      setPlaylist(playableItems)
       setAdsEnabled(adsOn)
       setLoading(false)
 
       const hasAd = adsOn && settingsData?.ad_playback_id
-      if (hasAd && playlistData?.length) {
+      if (hasAd && playableItems.length) {
         setShowPreRoll(true)
       }
     }
@@ -151,12 +158,12 @@ export default function MusicChannelPage() {
   // Ensure we advance to next video when playback ends (native listener in case React onEnded doesn't fire)
   useEffect(() => {
     const el = playerRef.current
-    if (!el || !playbackId) return
+    if (!el || !playbackKey) return
     const media = (el as any).media ?? el
     const onEnded = () => goToNext()
     media.addEventListener('ended', onEnded)
     return () => media.removeEventListener('ended', onEnded)
-  }, [playbackId, goToNext])
+  }, [playbackKey, goToNext])
 
   useEffect(() => {
     const id = requestAnimationFrame(() => {
@@ -166,11 +173,11 @@ export default function MusicChannelPage() {
       media.muted = isMuted
     })
     return () => cancelAnimationFrame(id)
-  }, [playbackId, currentIndex, nowPlaying?.id, volume, isMuted])
+  }, [playbackKey, currentIndex, nowPlaying?.id, volume, isMuted])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!playbackId || !playerRef.current) return
+      if (!playbackKey || !playerRef.current) return
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
       switch (e.key) {
@@ -191,7 +198,11 @@ export default function MusicChannelPage() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [playbackId, isPlaying, currentTime, seek])
+  }, [playbackKey, isPlaying, currentTime, seek])
+
+  useEffect(() => {
+    setPlayerError('')
+  }, [playbackKey])
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0
 
@@ -263,11 +274,12 @@ export default function MusicChannelPage() {
             <div ref={containerRef} className="relative w-full flex-1 min-h-0 flex flex-col bg-black">
               {/* Video area - no default controls */}
               <div className="relative flex-1 min-h-[40vh]">
-                {playbackId ? (
+                {playbackKey ? (
                   <MuxPlayer
                     ref={playerRef}
-                    key={nowPlaying?.id}
-                    playbackId={playbackId}
+                    key={playbackKey}
+                    playbackId={playbackId || undefined}
+                    src={remoteSrc || undefined}
                     streamType="on-demand"
                     autoPlay="any"
                     onEnded={handleEnded}
@@ -275,6 +287,13 @@ export default function MusicChannelPage() {
                     onLoadedMetadata={handleLoadedMetadata}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
+                    onError={() =>
+                      setPlayerError(
+                        remoteSrc
+                          ? 'This Cision video is unavailable from its source.'
+                          : 'This video could not be loaded.'
+                      )
+                    }
                     className="w-full h-full"
                     style={{
                       '--controls': 'none',
@@ -284,6 +303,11 @@ export default function MusicChannelPage() {
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                     No playback ID for this video
+                  </div>
+                )}
+                {playerError && (
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/80 px-6 text-center text-gray-300">
+                    {playerError}
                   </div>
                 )}
 
@@ -313,7 +337,7 @@ export default function MusicChannelPage() {
               </div>
 
               {/* YouTube-style control bar: progress line then row of controls */}
-              {playbackId && (
+              {playbackKey && (
                 <div className="flex-shrink-0 bg-gray-950 px-3 py-2">
                   {/* Progress bar */}
                   <div
