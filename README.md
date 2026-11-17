@@ -127,7 +127,7 @@ Navigate to `/admin/titles`
 2. Choose **Content Type** (Film, Music Video, or Podcast)
 3. Fill in:
    - **Title**: Display name
-   - **Poster Image URL**: Direct link to poster image
+   - **Cover Image (Image only url)**: Direct link to a cover/poster image
    - **Mux Playback ID**: Get from your Mux dashboard
    - **Category**: Trending, Originals, New Releases, or Music Videos
    - **Runtime**: Duration in seconds

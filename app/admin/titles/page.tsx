@@ -368,7 +368,7 @@ function AdminTitlesContent() {
     const title = editTitleForm.title.trim()
     const poster_url = editTitleForm.poster_url.trim()
     if (!title || !poster_url) {
-      setMessage('Error: Title and poster URL are required.')
+      setMessage('Error: Title and cover image URL are required.')
       return
     }
     setSavingTitleId(id)
@@ -457,13 +457,13 @@ function AdminTitlesContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Poster Image URL</label>
+                <label className="block text-sm font-medium mb-2">Cover Image (Image only url)</label>
                 <input
                   type="url"
                   value={formData.poster_url}
                   onChange={(e) => setFormData({ ...formData, poster_url: e.target.value })}
                   className="w-full px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                  placeholder="https://example.com/poster.jpg"
+                  placeholder="https://example.com/cover.jpg"
                   required
                 />
               </div>
@@ -840,7 +840,9 @@ function AdminTitlesContent() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Poster URL *</label>
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                          Cover Image (Image only url) *
+                        </label>
                         <input
                           type="url"
                           value={editTitleForm.poster_url}
@@ -848,7 +850,7 @@ function AdminTitlesContent() {
                             setEditTitleForm({ ...editTitleForm, poster_url: e.target.value })
                           }
                           className="w-full px-4 py-2 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-glow"
-                          placeholder="https://..."
+                          placeholder="https://example.com/cover.jpg"
                         />
                       </div>
                       <div>

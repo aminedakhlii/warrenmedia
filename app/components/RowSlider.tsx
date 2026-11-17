@@ -200,6 +200,11 @@ export default function RowSlider({
                 className="object-cover"
                 draggable={false}
               />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent pt-10 pb-3 px-3">
+                <p className="text-sm font-semibold text-white leading-snug line-clamp-2 text-glow">
+                  {titleItem.title}
+                </p>
+              </div>
             </div>
           ))}
         </div>
